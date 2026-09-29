@@ -1,0 +1,459 @@
+/*
+ * 리뷰 화면 스타일. Shadow DOM 안에만 들어가므로 미리보기로 새지 않는다 (plan.md 4.3).
+ * :host는 body 스타일을 물려받고, slot으로 꽂힌 미리보기가 그 값을 이어받아야 하므로
+ * :host에서 all: initial을 쓰지 않고 리뷰 화면 요소에만 글꼴과 색을 직접 준다.
+ */
+:host {
+  display: block;
+}
+
+.rv-app {
+  --rv-fg: #1f2328;
+  --rv-muted: #59636e;
+  --rv-line: #d1d9e0;
+  --rv-bg: #f6f8fa;
+  --rv-panel: #ffffff;
+  --rv-accent: #0969da;
+  --rv-danger: #cf222e;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100vh;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.rv-header,
+.rv-toolbar,
+.rv-address,
+.rv-code,
+.rv-panel {
+  font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--rv-fg);
+}
+
+.rv-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.rv-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--rv-muted);
+  font-size: 12px;
+}
+
+.rv-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.rv-stage {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rv-width {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rv-width input {
+  width: 180px;
+}
+
+.rv-width output {
+  min-width: 48px;
+  color: var(--rv-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rv-address {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.rv-address input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--rv-line);
+  border-radius: 6px;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--rv-fg);
+  background: #fff;
+}
+
+.rv-frame {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 24px;
+  border: 1px dashed var(--rv-line);
+  border-radius: 8px;
+  overflow: auto;
+}
+
+.rv-panel {
+  flex: 0 0 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rv-section {
+  padding: 12px;
+  border: 1px solid var(--rv-line);
+  border-radius: 8px;
+  background: var(--rv-panel);
+}
+
+.rv-section h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rv-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rv-field-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.rv-field-type {
+  font-weight: 400;
+  color: var(--rv-muted);
+  font-size: 11px;
+}
+
+.rv-field-desc,
+.rv-note,
+.rv-empty {
+  margin: 0;
+  color: var(--rv-muted);
+  font-size: 12px;
+}
+
+.rv-field-error {
+  color: var(--rv-danger);
+  font-size: 12px;
+}
+
+.rv-input,
+.rv-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--rv-line);
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  color: inherit;
+}
+
+.rv-textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.rv-checkbox {
+  align-self: flex-start;
+}
+
+.rv-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.rv-state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-button {
+  padding: 5px 10px;
+  border: 1px solid var(--rv-line);
+  border-radius: 6px;
+  background: var(--rv-bg);
+  color: var(--rv-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rv-button:hover {
+  border-color: var(--rv-muted);
+}
+
+.rv-button-small {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.rv-button-primary {
+  border-color: var(--rv-accent);
+  background: var(--rv-accent);
+  color: #fff;
+}
+
+.rv-button-danger {
+  color: var(--rv-danger);
+}
+
+.rv-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-log-list {
+  max-height: 200px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.rv-log-item {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--rv-bg);
+}
+
+.rv-log-item time {
+  color: var(--rv-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rv-log-item code {
+  overflow-wrap: anywhere;
+}
+
+.rv-decisions {
+  margin: 0;
+  padding-left: 18px;
+}
+
+@media (max-width: 720px) {
+  .rv-body {
+    flex-direction: column;
+  }
+
+  .rv-panel {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
+
+.rv-request code {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.rv-status {
+  font-variant-numeric: tabular-nums;
+  color: var(--rv-muted);
+}
+
+.rv-status-error {
+  color: var(--rv-danger);
+  font-weight: 600;
+}
+
+.rv-scenario,
+.rv-route {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-routes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rv-route {
+  padding-top: 10px;
+  border-top: 1px solid var(--rv-line);
+}
+
+.rv-route-head {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.rv-route-head code {
+  overflow-wrap: anywhere;
+}
+
+.rv-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--rv-muted);
+}
+
+.rv-input-short {
+  width: 72px;
+}
+
+.rv-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rv-source {
+  padding: 0 4px;
+  border: 1px solid var(--rv-line);
+  border-radius: 4px;
+  color: var(--rv-muted);
+  font-size: 11px;
+}
+
+/* 코드 패널 (plan.md 8) */
+.rv-code {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--rv-line);
+  border-radius: 8px;
+  background: var(--rv-panel);
+}
+
+.rv-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--rv-line);
+}
+
+.rv-tab {
+  padding: 6px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--rv-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rv-tab[aria-selected="true"] {
+  border-bottom-color: var(--rv-accent);
+  color: var(--rv-fg);
+  font-weight: 600;
+}
+
+.rv-sha {
+  margin-left: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.rv-file-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rv-file-bar select {
+  max-width: 100%;
+}
+
+.rv-link {
+  color: var(--rv-accent);
+}
+
+.rv-pre {
+  max-height: 480px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--rv-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.rv-diff-line {
+  display: block;
+  min-width: max-content;
+}
+
+.rv-diff-add {
+  background: #dafbe1;
+}
+
+.rv-diff-del {
+  background: #ffebe9;
+}
+
+.rv-diff-hunk {
+  color: var(--rv-accent);
+}
+
+.rv-diff-meta {
+  color: var(--rv-muted);
+}
+
+.rv-code-lines > div {
+  min-width: max-content;
+}
+
+.rv-line-no {
+  display: inline-block;
+  width: 3ch;
+  margin-right: 12px;
+  color: var(--rv-muted);
+  text-align: right;
+  user-select: none;
+}
