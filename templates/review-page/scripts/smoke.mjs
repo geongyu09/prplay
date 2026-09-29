@@ -34,11 +34,12 @@ for (const file of files) {
   const problems = [];
   let step = "첫 화면";
   page.on("pageerror", (e) => problems.push(`[${step}] 오류: ${e.message}`));
-  page.on("console", (m) => m.type() === "error" && problems.push(`[${step}] 콘솔: ${m.text()}`));
+  page.on("console", (m) => m.type() === "error" && problems.push(`[${step}] 콘솔: ${m.text().split("\n")[0]}`));
   page.on("request", (r) => {
     if (!/^(file|data|blob):/.test(r.url())) problems.push(`[${step}] 외부 요청: ${r.url()}`);
   });
 
+  const warnings = new Set();
   // 리뷰 화면은 Shadow DOM 안에 있다. Playwright CSS 선택자는 열린 Shadow DOM을 뚫는다
   const check = async () => {
     await page.waitForTimeout(300);
@@ -49,7 +50,6 @@ for (const file of files) {
     for (const m of missing) warnings.add(`목 없는 요청: ${m.replace(/\s+/g, " ").trim()}`);
     if (!shadowText) problems.push(`[${step}] 리뷰 화면이 그려지지 않음`);
   };
-  const warnings = new Set();
 
   await page.goto(pathToFileURL(path.resolve(file)).href);
   await check();
@@ -57,9 +57,11 @@ for (const file of files) {
   const sectionButtons = (title) =>
     page.locator(".rv-section").filter({ has: page.locator("h2", { hasText: title }) }).locator(".rv-row").first().locator("button");
 
-  for (const [kind, title] of [["프리셋", "프리셋"], ["시나리오", "시나리오"]]) {
-    const buttons = sectionButtons(title);
+  const clicked = {};
+  for (const kind of ["프리셋", "시나리오"]) {
+    const buttons = sectionButtons(kind);
     const count = await buttons.count();
+    clicked[kind] = count;
     for (let i = 0; i < count; i++) {
       const name = (await buttons.nth(i).innerText()).trim();
       step = `${kind} ${name}`;
@@ -68,7 +70,8 @@ for (const file of files) {
     }
   }
 
-  const label = path.relative(process.cwd(), file);
+  // 실제로 누른 개수를 같이 보여 준다 (plan.md 9.4)
+  const label = `${path.relative(process.cwd(), file)} (프리셋 ${clicked["프리셋"]}개, 시나리오 ${clicked["시나리오"]}개)`;
   if (problems.length > 0) {
     failed++;
     console.log(`실패 ${label}`);
