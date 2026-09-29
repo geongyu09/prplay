@@ -1,4 +1,4 @@
-// review-kit 설정. 경로는 모두 이 파일이 있는 폴더 기준이다
+// review-page 스킬 설정 (plan.md 11.2). 경로는 모두 이 파일이 있는 폴더 기준이다
 import { defineConfig } from "review-kit";
 
 export default defineConfig({

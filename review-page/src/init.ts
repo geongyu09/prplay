@@ -1,4 +1,4 @@
-// review-kit init: 설정 파일, 스킬 템플릿, 예시 케이스를 현재 폴더에 만든다 (plan.md 11.1)
+// init: 설정 파일과 예시 케이스를 현재 폴더에 만든다 (plan.md 11.1). 스킬의 처음 설정 단계가 부른다
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -31,7 +31,7 @@ function listFiles(dir: string): string[] {
 export function init(cwd: string, force: boolean) {
   const created: string[] = [];
   const skipped: string[] = [];
-  const write = (target: string, content: string | Buffer, mode?: number) => {
+  const write = (target: string, content: string | Buffer) => {
     const file = path.join(cwd, target);
     if (fs.existsSync(file) && !force) {
       skipped.push(target);
@@ -39,7 +39,6 @@ export function init(cwd: string, force: boolean) {
     }
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, content);
-    if (mode) fs.chmodSync(file, mode);
     created.push(target);
   };
 
@@ -52,14 +51,8 @@ export function init(cwd: string, force: boolean) {
       : config.replace(/ {2}repoUrl: "__REPO_URL__",\n/, '  // repoUrl: "https://github.com/<owner>/<repo>",\n'),
   );
 
-  for (const [from, to] of [
-    ["review-page", ".claude/skills/review-page"],
-    ["example", "review"],
-  ]) {
-    for (const rel of listFiles(path.join(templates, from))) {
-      const src = path.join(templates, from, rel);
-      write(path.join(to, rel), fs.readFileSync(src), fs.statSync(src).mode & 0o777);
-    }
+  for (const rel of listFiles(path.join(templates, "example"))) {
+    write(path.join("review", rel), fs.readFileSync(path.join(templates, "example", rel)));
   }
 
   for (const f of created) console.log(`만듦    ${f}`);
@@ -75,13 +68,20 @@ export function init(cwd: string, force: boolean) {
     }
   });
 
+  // tsconfig paths는 설정 파일 폴더에서 스킬 폴더의 index.ts까지 상대 경로 (plan.md 11.2)
+  const index = path.relative(cwd, path.resolve(import.meta.dirname, "index.ts")).split(path.sep).join("/");
+  const skillDir = path.relative(cwd, path.resolve(import.meta.dirname, "..")).split(path.sep).join("/");
+  const cli = `node ${skillDir}/src/cli.ts`;
+
   console.log(`
 다음 할 일
-${missing.length > 0 ? `- 설치: ${missing.join(" ")} (리뷰 화면이 프로젝트 것을 쓴다)\n` : ""}- package.json scripts에 추가:
-    "review:build": "review-kit build",
-    "review:dev": "review-kit dev"
-- .gitignore에 추가: review/dist/
-- tsconfig include에 review, review.config.ts 추가 (스킬 검증의 tsc가 케이스를 검사하도록)
-- 예시 빌드: npx review-kit build example → review/dist/review-example.html
+${missing.length > 0 ? `- 설치: ${missing.join(" ")} (리뷰 화면이 프로젝트 것을 쓴다)\n` : ""}- tsconfig compilerOptions.paths에 추가 (케이스·설정 파일의 review-kit import):
+    "review-kit": ["./${index}"]
+- tsconfig include에 review, review.config.ts가 없으면 추가 (스킬 검증의 tsc가 케이스를 검사하도록)
+- .gitignore에 추가:
+    review/dist/
+    ${skillDir}/node_modules/
+- review.config.ts를 프로젝트에 맞게 채운다 (alias, jsxImportSource, sharedPackages 등)
+- 예시 빌드: ${cli} build example → review/dist/review-example.html
 - PR 케이스 만들기: Claude Code에서 /review-page`);
 }

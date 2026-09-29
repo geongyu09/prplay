@@ -1,0 +1,21 @@
+{
+  "name": "review-page-skill",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@mswjs/interceptors": "0.41.9",
+    "@svgr/plugin-jsx": "8.1.0",
+    "@svgr/plugin-svgo": "8.1.0",
+    "prism-react-renderer": "^2.4.1",
+    "react-docgen": "8.0.4",
+    "vite": "8.2.2",
+    "vite-plugin-singlefile": "2.3.3",
+    "vite-plugin-svgr": "5.2.0"
+  }
+}

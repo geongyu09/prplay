@@ -1,4 +1,4 @@
-// review-kit init이 만든 예시 케이스. `npx review-kit build example`로 빌드한다
+// /review-page 처음 설정(init)이 만든 예시 케이스. `node .claude/skills/review-page/src/cli.ts build example`로 빌드한다
 import { defineCase } from "review-kit";
 
 import Example from "../Example";

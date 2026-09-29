@@ -1,9 +1,9 @@
 ---
 name: review-page
-description: 현재 브랜치(또는 인자로 준 번호)의 PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 있는 review-kit 케이스 파일을 만들고 단일 HTML로 빌드한다.
+description: 현재 브랜치(또는 인자로 준 번호)의 PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 있는 케이스 파일을 만들고 단일 HTML로 빌드한다. 처음이면 설정 파일부터 만든다.
 argument-hint: "[PR번호]"
 disable-model-invocation: true
-allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git log *) Bash(git rev-parse *) Bash(npx tsc *) Bash(npx review-kit *) Bash(bash *find-impacts.sh *) Bash(node *smoke.mjs *) Read Grep Glob Write Edit
+allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git log *) Bash(git rev-parse *) Bash(npx tsc *) Bash(node *review-page/src/cli.ts *) Bash(bash *find-impacts.sh *) Bash(node *smoke.mjs *) Read Grep Glob Write Edit
 ---
 
 # 리뷰 플레이그라운드 케이스 만들기
@@ -13,10 +13,23 @@ allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git l
 - PR: !`gh pr view $ARGUMENTS --json number,title,baseRefName -q '"#\(.number) \(.title) (base: \(.baseRefName))"' 2>/dev/null || echo "(PR을 찾지 못함. /review-page <PR번호>로 다시 부르거나 번호를 사용자에게 묻는다)"`
 - 바뀐 파일(git 루트 기준): !`gh pr diff $ARGUMENTS --name-only 2>/dev/null || echo "(없음)"`
 - 이 폴더의 git 루트 기준 위치(바뀐 파일 경로에서 떼어 낸다): !`git rev-parse --show-prefix`
-- 설정 파일: !`ls review.config.ts 2>/dev/null || echo "(없음. review.config.ts가 있는 폴더에서 다시 부르거나 npx review-kit init을 먼저 실행한다)"`
+- 설정 파일: !`ls review.config.ts 2>/dev/null || echo "(없음. 아래 '처음 설정'을 먼저 한다)"`
 - 기존 케이스: !`ls review/cases 2>/dev/null || echo "(없음)"`
 
-설정 파일이 없으면 여기서 멈추고 사용자에게 알린다. 모든 명령은 `review.config.ts`가 있는 폴더에서 실행한다.
+모든 명령은 `review.config.ts`가 있는 폴더에서 실행한다. 빌드 명령은 `node ${CLAUDE_SKILL_DIR}/src/cli.ts`다. 처음 실행하면 이 스킬 폴더에 빌드 도구를 설치(`npm ci`, 약 66MB)하므로 시간이 걸린다.
+
+## 처음 설정
+
+설정 파일이 **없을 때만** 한다. 있으면 '할 일'로 넘어간다. 프로젝트 루트(`package.json`이 있는 폴더)가 여기가 아니면 사용자에게 어느 폴더에서 할지 묻는다.
+
+1. 사용자에게 설정 파일과 예시 케이스를 만든다고 알리고 동의를 받는다.
+2. `node ${CLAUDE_SKILL_DIR}/src/cli.ts init`을 실행한다. `review.config.ts`, `review/Example.tsx`, `review/cases/example.tsx`가 생기고, tsconfig·`.gitignore`에 넣을 내용과 설치할 패키지가 출력된다.
+3. 프로젝트의 번들러 설정(`vite.config.*`, `webpack.config.*`), tsconfig, `package.json`을 읽어 `review.config.ts`를 채운다: `alias`(tsconfig `paths`와 같게), `jsxImportSource`(CSS-in-JS), `define`(코드가 읽는 `process.env.*` 등), `svgr`(SVG를 컴포넌트로 import하면 그 옵션), `sharedPackages`(Context를 쓰는 CSS-in-JS·라우터·서버 상태 라이브러리). `wrapper`·`styles`·`mockHandlers`는 필요해 보이면(전역 Provider, CDN 폰트, 기존 MSW 핸들러) 무엇을 넣을지 사용자에게 제안만 한다.
+4. `init`이 출력한 tsconfig 변경(`paths`의 `review-kit` 한 줄, `include`)과 `.gitignore` 줄, 설치할 패키지를 보여 주고 동의를 받아 넣는다.
+5. `node ${CLAUDE_SKILL_DIR}/src/cli.ts build example`로 예시가 빌드되는지 확인한다. 실패하면 설정 파일을 고쳐 다시 한다(3번 실패하면 멈추고 보고). 예시 파일은 사용자가 원하면 지운다.
+6. PR 케이스 작업('할 일')으로 넘어간다.
+
+이 단계에서만 케이스 파일 밖(설정 파일, tsconfig, `.gitignore`)을 고친다.
 
 ## 할 일
 
@@ -89,7 +102,7 @@ allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git l
 순서대로 돌리고, 하나라도 실패하면 오류를 읽고 **케이스 파일만** 고친 뒤 1번부터 다시 한다. 세 번 실패하면 멈추고 마지막 오류와 시도한 수정을 보고한다.
 
 1. `npx tsc --noEmit` — 케이스 파일의 오류가 없어야 한다. 케이스와 무관한 기존 오류는 무시하고 보고에만 적는다. tsconfig `include`가 `review/`를 덮지 않아(`./**/*.tsx` 같은 넓은 glob은 덮는다) 케이스가 검사되지 않으면 그 사실을 보고에 적는다.
-2. `npx review-kit build <케이스 이름>` — 케이스마다. 케이스 이름은 확장자를 뺀 파일 이름이고, 결과는 `outDir`의 `review-<케이스 이름>.html`. 빌드가 성공하면 경고는 고치지 않고, 케이스 파일을 가리키는 경고만 보고에 적는다.
+2. `node ${CLAUDE_SKILL_DIR}/src/cli.ts build <케이스 이름>` — 케이스마다. 케이스 이름은 확장자를 뺀 파일 이름이고, 결과는 `outDir`의 `review-<케이스 이름>.html`. 빌드가 성공하면 경고는 고치지 않고, 케이스 파일을 가리키는 경고만 보고에 적는다.
 3. `node ${CLAUDE_SKILL_DIR}/scripts/smoke.mjs <결과 HTML>...` — 첫 화면, 프리셋, 시나리오를 하나씩 눌러 렌더링 오류·콘솔 오류·외부 요청을 확인하고 누른 개수를 출력한다. 개수가 케이스의 프리셋·시나리오 수와 같은지 본다. "경고 목 없는 요청"이 나오면 그 요청을 시나리오에 넣는다. playwright가 없다고 나오면 건너뛰고 보고에 적는다.
 
 ## 끝나면

@@ -1,4 +1,4 @@
-// review-kit init이 만든 예시 컴포넌트. 확인이 끝나면 지워도 된다
+// /review-page 처음 설정(init)이 만든 예시 컴포넌트. 확인이 끝나면 지워도 된다
 type Props = {
   /** 인사말 */
   greeting: string;

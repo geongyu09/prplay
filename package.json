@@ -1,61 +1,14 @@
 {
-  "name": "review-kit",
-  "version": "0.0.0",
+  "name": "prplay",
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
-  },
-  "bin": {
-    "review-kit": "src/cli.ts"
-  },
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "files": [
-    "dist",
-    "src/index.ts",
-    "src/runtime",
-    "templates"
-  ],
-  "publishConfig": {
-    "bin": {
-      "review-kit": "dist/cli.js"
-    },
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      }
-    }
+    "node": ">=22.18"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
-    "prepack": "pnpm build"
+    "typecheck": "tsc --noEmit"
   },
   "packageManager": "pnpm@11.20.0",
-  "dependencies": {
-    "@codemirror/commands": "^6.11.1",
-    "@codemirror/lang-json": "^6.0.2",
-    "@codemirror/language": "^6.12.4",
-    "@codemirror/lint": "^6.9.7",
-    "@codemirror/state": "^6.7.6",
-    "@codemirror/view": "^6.43.13",
-    "@mswjs/interceptors": "0.41.9",
-    "@svgr/plugin-jsx": "8.1.0",
-    "@svgr/plugin-svgo": "8.1.0",
-    "prism-react-renderer": "^2.4.1",
-    "react-docgen": "8.0.4",
-    "vite": "8.2.2",
-    "vite-plugin-singlefile": "2.3.3",
-    "vite-plugin-svgr": "5.2.0"
-  },
-  "peerDependencies": {
-    "msw": ">=2",
-    "react": ">=18",
-    "react-dom": ">=18"
-  },
   "devDependencies": {
     "@types/node": "26.1.2",
     "@types/react": "19.2.18",
