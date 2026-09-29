@@ -47,12 +47,12 @@
 - [ ] 5.5 (선택) Playwright 스모크 테스트
 - [ ] 5.6 다른 PR 두세 개로 다듬기
 
-## 6단계. 라이브러리 분리
-- [ ] 6.1 패키지 구조
-- [ ] 6.2 defineConfig와 review.config.ts
-- [ ] 6.3 CLI (build, init)
-- [ ] 6.4 peerDependencies와 ESM 배포
-- [ ] 6.5 Knot 적용 방법 정리
+## 6단계. 스킬로 묶기
+- [ ] 6.1 스킬 폴더 구성
+- [ ] 6.2 defineConfig와 review-kit 이름 풀기
+- [ ] 6.3 CLI (build, dev, init)
+- [ ] 6.4 스킬 폴더 의존성과 자동 설치
+- [ ] 6.5 Knot 적용과 처음 설정 단계
 - [ ] 6.6 README
 
 ## 확인 항목 (plan.md 14장)

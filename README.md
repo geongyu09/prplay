@@ -1,4 +1,4 @@
-# review-kit
+# prplay — review-page 스킬
 
 PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 있는 **HTML 파일 하나**를 PR마다 만들고, Claude 아티팩트로 공유하는 도구다. 설계와 결정 근거는 [`plan.md`](plan.md)에 있다.
 
@@ -9,22 +9,34 @@ PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 
 - 코드 패널: 소스(문법 강조), PR diff, 커밋 SHA 기준 GitHub 링크, 결정 목록(최대 5개), 영향 범위
 - 편집 상태는 브라우저에 저장되고 JSON 복사/붙여넣기로 다른 리뷰어에게 넘긴다
 
-역할 분담: 틀(리뷰 화면, 모킹 엔진, 빌드)은 이 패키지, PR마다 바뀌는 **케이스 파일**은 AI(`/review-page` 스킬)가 쓴다.
+역할 분담: 틀(리뷰 화면, 모킹 엔진, 빌드)은 스킬 폴더에 들어 있고, PR마다 바뀌는 **케이스 파일**은 AI(`/review-page` 스킬)가 쓴다. npm 패키지로 배포하지 않고 스킬 폴더 하나(`review-page/`)를 복사해서 쓴다(plan.md 11장).
 
 ## 요구 사항
 
-- Node 22 이상 (`review.config.ts`를 Node 타입 제거로 바로 읽는다)
+- Node 22.18 이상 (`.ts` 파일을 Node 타입 제거로 바로 실행한다)
+- npm (스킬 폴더에 빌드 도구를 설치한다)
 - 대상 프로젝트에 `react`, `react-dom`, `msw` 설치 (리뷰 화면이 프로젝트 것을 같이 쓴다)
 - React 컴포넌트. 빌드는 Vite로 하므로 webpack 프로젝트는 설정 파일의 `plugins`, `svgr`, `define`으로 로더를 맞춘다
 - (선택) `rg`(ripgrep): 영향 범위 스크립트, `playwright`: 스모크 테스트
 
-## 설치
+## 스킬 복사
 
-아직 npm에 배포하지 않았다. 로컬 경로로 연결한다.
+이 저장소의 `review-page/`를 대상 프로젝트(`package.json`이 있는 폴더)의 `.claude/skills/review-page/`로 복사한다.
 
 ```sh
-pnpm add -D link:<review-kit 경로>   # 또는 pnpm pack 결과 tgz 경로
-npx review-kit init
+mkdir -p <프로젝트>/.claude/skills
+rsync -a --exclude node_modules review-page/ <프로젝트>/.claude/skills/review-page/
+```
+
+- 빌드 도구(Vite, 플러그인, react-docgen)와 리뷰 화면 라이브러리(CodeMirror, `@mswjs/interceptors`, prism)는 **스킬 폴더 안에** 설치된다. 처음 빌드할 때 `cli.ts`가 스킬 폴더에서 `npm ci`를 돌린다(약 66MB). 대상 `package.json`은 바뀌지 않는다.
+- `package-lock.json`의 해시가 바뀌면(스킬을 새로 복사하면) 다음 실행 때 다시 설치한다. 스킬 업데이트는 다시 복사하는 것이다.
+
+## 처음 설정
+
+Claude Code에서 `/review-page`를 부르면 설정 파일이 없을 때 처음 설정부터 한다(동의를 받고 `init` → 설정 채우기 → 예시 빌드). 직접 하려면:
+
+```sh
+node .claude/skills/review-page/src/cli.ts init
 ```
 
 `init`은 현재 폴더에 아래를 만든다. 이미 있는 파일은 건너뛴다(`--force`면 덮어쓴다).
@@ -32,13 +44,12 @@ npx review-kit init
 | 파일 | 용도 |
 | --- | --- |
 | `review.config.ts` | 설정. git remote가 GitHub면 `repoUrl`을 채운다 |
-| `.claude/skills/review-page/` | 케이스를 만드는 Claude Code 스킬, 예시 케이스, 스크립트 |
 | `review/Example.tsx`, `review/cases/example.tsx` | 바로 빌드해 볼 수 있는 예시. 확인 후 지워도 된다 |
 
-그리고 직접 한다.
-- `package.json` scripts: `"review:build": "review-kit build"`, `"review:dev": "review-kit dev"`
-- `.gitignore`: `review/dist/`
-- tsconfig `include`에 `review`, `review.config.ts` (스킬이 `tsc`로 케이스를 검사한다)
+`tsconfig`·`.gitignore`·`package.json`은 고치지 않고 넣을 내용을 출력한다.
+- tsconfig `compilerOptions.paths`: `"review-kit": ["./.claude/skills/review-page/src/index.ts"]` (케이스·설정 파일의 `review-kit` import를 스킬 폴더로 돌린다. Node와 Vite 쪽은 `cli.ts`가 알아서 돌린다)
+- tsconfig `include`에 `review`, `review.config.ts` (스킬이 `tsc`로 케이스를 검사한다. 넓은 glob이면 이미 들어 있다)
+- `.gitignore`: `review/dist/`, `.claude/skills/review-page/node_modules/`
 
 ## 설정 (`review.config.ts`)
 
@@ -54,6 +65,7 @@ export default defineConfig({
   jsxImportSource: "@emotion/react",        // 기본 "react"
   define: { "process.env.API_BASE_URL": JSON.stringify("") },
   sharedPackages: ["@emotion/react", "@tanstack/react-query", "react-router"], // 프로젝트 node_modules에서 가져올 패키지
+  styles: ["./review/fonts.css"],           // 미리보기에 넣을 CSS(폰트 @font-face 등). 번들에 인라인된다
   wrapper: "./review/Wrapper.tsx",          // Provider 묶음
   mockHandlers: "./src/mocks/handlers.ts",  // 기존 MSW 핸들러. 시나리오에 없는 요청에 쓴다
   casesDir: "./review/cases",
@@ -86,17 +98,17 @@ export default defineCase({
 });
 ```
 
-형식과 규칙은 `plan.md` 3·5·6장과 스킬(`templates/review-page/SKILL.md`)에 있다.
+형식과 규칙은 `plan.md` 3·5·6장과 스킬(`review-page/SKILL.md`)에 있다.
 
 ## 명령
 
-설정 파일이 있는 폴더에서 실행한다. 케이스는 파일 경로나 `casesDir` 안의 이름(`365`)이다.
+설정 파일이 있는 폴더에서 `node .claude/skills/review-page/src/cli.ts <명령>`으로 실행한다. 케이스는 파일 경로나 `casesDir` 안의 이름(`365`)이다.
 
 | 명령 | 하는 일 |
 | --- | --- |
-| `review-kit build <케이스>... [--pr 번호]` | 케이스마다 `outDir/review-<이름>.html` 단일 파일. 크기를 출력하고 14MB를 넘으면 경고 |
-| `review-kit dev <케이스> [--port 5173]` | 같은 설정의 Vite dev 서버(HMR). 케이스를 쓰는 동안 확인용 |
-| `review-kit init [--force]` | 위 '설치' 참고 |
+| `build <케이스>... [--pr 번호]` | 케이스마다 `outDir/review-<이름>.html` 단일 파일. 크기를 출력하고 14MB를 넘으면 경고 |
+| `dev <케이스> [--port 5173]` | 같은 설정의 Vite dev 서버(HMR). 케이스를 쓰는 동안 확인용 |
+| `init [--force]` | 위 '처음 설정' 참고 |
 
 `--pr`은 브라우저 저장 키(`review-kit:{PR}:{케이스}`)에 쓰인다. 없으면 케이스 파일 이름 앞 숫자를 쓴다.
 
@@ -109,7 +121,7 @@ Claude Code에서 PR 브랜치를 체크아웃하고 설정 파일 폴더에서:
 /review-page 371      # 번호 지정
 ```
 
-스킬은 바뀐 파일 중 컴포넌트·페이지를 골라 `review/cases/<PR번호>.tsx`(대상이 여럿이면 `<PR번호>-<이름>.tsx`)만 쓰고, `tsc` → `review-kit build` → 스모크 테스트를 통과할 때까지 케이스 파일만 고친다(3번 실패하면 멈춘다). `src/`는 고치지 않는다.
+스킬은 바뀐 파일 중 컴포넌트·페이지를 골라 `review/cases/<PR번호>.tsx`(대상이 여럿이면 `<PR번호>-<이름>.tsx`)만 쓰고, `tsc` → `build` → 스모크 테스트를 통과할 때까지 케이스 파일만 고친다(3번 실패하면 멈춘다). `src/`는 고치지 않는다.
 
 스킬 폴더의 스크립트는 따로 써도 된다.
 - `bash .claude/skills/review-page/scripts/find-impacts.sh <파일>...`: 그 파일을 import하는 다른 파일
@@ -137,12 +149,12 @@ Claude Code에서 PR 브랜치를 체크아웃하고 설정 파일 폴더에서:
 ## 개발
 
 ```sh
-pnpm install
-pnpm typecheck
-pnpm build    # Node 쪽(src/index.ts, cli.ts, init.ts, build/)을 dist/로 컴파일
-pnpm pack     # publishConfig가 bin·exports를 dist/로 바꾼다
+pnpm install                          # 루트: 타입 검사 도구만
+(cd review-page && npm ci)             # 스킬 폴더 의존성 (build·dev를 한 번 돌려도 설치된다)
+pnpm typecheck                        # review-page/src와 targets/knot 케이스
 ```
 
-- 로컬 링크에서는 `bin`·`exports`가 `src/`의 `.ts`를 가리키고 Node 타입 제거로 바로 실행된다.
-- 리뷰 화면(`src/runtime/`)은 사용자 컴포넌트와 같은 Vite 번들에서 변환되므로 소스 그대로 배포한다.
+- 스킬 원본은 `review-page/`다. 컴파일하지 않고 `.ts` 그대로 둔다. 리뷰 화면(`src/runtime/`)은 사용자 컴포넌트와 같은 Vite 번들에서 변환되고, Node 쪽(`cli.ts`, `init.ts`, `build/`)은 Node 타입 제거로 바로 실행된다.
+- 의존성을 바꾸면 `review-page/`에서 `npm install`로 `package-lock.json`을 갱신한다.
+- `targets/knot/`은 Knot에 둘 설정·wrapper·케이스 원본이다. 확인은 Knot 복사본에 스킬 폴더와 이 파일들을 복사해서 한다(plan.md 11.4).
 - 개발 순서와 진행 상황은 `/roadmap` 스킬과 `progress.md`를 본다.

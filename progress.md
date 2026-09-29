@@ -1,7 +1,7 @@
 # 진행 상황
 
 - Knot 경로: /Users/baggeongyu/Documents/Coding/woowacourse/project/2026-Knot (프런트엔드: frontend/)
-- 빌드 대상: /Users/baggeongyu/Documents/Coding/woowacourse/project/2026-Knot-pr366/frontend (PR #366 worktree). 6단계부터 `review-kit`을 link:로 연결하고 `review.config.ts`·`review/`를 둔다(plan.md 11.4, 사용자 승인). 빌드는 그 폴더에서 `pnpm review:build <케이스>`, `pnpm review:dev <케이스>`
+- 빌드 대상: Knot 복사본(scratchpad에 clone). 스킬 폴더(`review-page/`)를 `.claude/skills/review-page/`로 복사하고 `targets/knot/` 파일을 둬서 `node .claude/skills/review-page/src/cli.ts build <케이스>`로 빌드한다(plan.md 11.4). PR #366 worktree의 `review-kit` 링크 설정은 치웠다
 - 코드 위치: 이 저장소(prplay). Knot에는 쓰지 않는다 (plan.md 13장 '작업 위치')
 - (이전 기록) 스파이크를 처음 만든 곳, 2026-09-27 prplay로 옮김: /Users/baggeongyu/Documents/Coding/woowacourse/project/2026-Knot-pr366/frontend (PR #366을 `review-spike/pr-366` 브랜치 worktree로 받음. develop 작업 트리는 건드리지 않음)
 - 시작일: 2026-09-27
@@ -50,12 +50,12 @@
 - [x] 5.5 (선택) Playwright 스모크 테스트
 - [x] 5.6 다른 PR 두세 개로 다듬기
 
-## 6단계. 라이브러리 분리
-- [x] 6.1 패키지 구조
-- [x] 6.2 defineConfig와 review.config.ts
-- [x] 6.3 CLI (build, init)
-- [x] 6.4 peerDependencies와 ESM 배포
-- [x] 6.5 Knot 적용 방법 정리
+## 6단계. 스킬로 묶기
+- [x] 6.1 스킬 폴더 구성
+- [x] 6.2 defineConfig와 review-kit 이름 풀기
+- [x] 6.3 CLI (build, dev, init)
+- [x] 6.4 스킬 폴더 의존성과 자동 설치
+- [x] 6.5 Knot 적용과 처음 설정 단계
 - [x] 6.6 README
 
 ## 확인 항목 (plan.md 14장)
@@ -74,7 +74,10 @@
 - 3단계 2026-09-29 (사용자가 아티팩트에서 워크스페이스 홈 네 시나리오 전환 확인)
 - 4단계 2026-09-29 (4케이스 소스·diff 표시, SHA 링크, 강조 후 크기 기록. Playwright file:// 확인)
 - 5단계 2026-09-29 (처음 보는 PR 3개에서 스킬 한 번으로 빌드·스모크 통과, src 변경 없음, decisions 5개 이하. 에이전트가 사람 대신 돌렸고, 생성된 케이스를 사람이 검토해 규칙에 반영하는 일은 남음)
-- 6단계 2026-09-29 (src에 Knot 전용 내용 없음, 기존 4케이스 스모크 통과, 빈 Vite+React에서 pack 설치→init→예시 빌드 1005KB)
+- (이전 방식) 6단계 라이브러리 분리 2026-09-29 (src에 Knot 전용 내용 없음, 기존 4케이스 스모크 통과, 빈 Vite+React에서 pack 설치→init→예시 빌드 1005KB)
+- 6단계 방향 변경 2026-09-29: 사용자 결정으로 npm 패키지 대신 스킬 폴더 하나로 묶는다(plan.md 11장). 스파이크: 스킬 폴더만 복사한 Knot 복사본에서 기존 4케이스 빌드·스모크·tsc 통과, 빈 Vite+React에서 예시 1006KB. 차이는 lockfile 없이 설치한 CodeMirror 버전뿐
+
+- 6단계 2026-09-29 (스킬 폴더만 복사한 Knot 복사본: npm ci 자동 설치 후 4케이스 빌드 결과가 스파이크 결과와 바이트 단위로 같음, 스모크·tsc 통과, dev 서버 응답. 빈 Vite+React: init → 예시 1006KB, 스모크·tsc 통과, package.json 그대로. prplay 루트에 npm 배포 설정·dist 없음)
 
 ## 막힌 점
 
@@ -114,3 +117,6 @@
 - 2026-09-29 폰트 분리(사용자 결정): review.config.ts `styles` → virtual:review-styles, review-kit에서 pretendard·fonts.css 제거, targets/knot/review/fonts.css + PR #366 worktree devDependency pretendard 1.3.9. Knot 결과 크기 그대로(3.8MB), 빈 프로젝트 예시 3685KB → 1005KB. plan.md 2.3·11.2·11.4·13장
 - 2026-09-29 5.6 scratchpad Knot 클론의 #362·#368·#346에서 에이전트가 SKILL.md만 보고 실행: 모두 첫 시도에 tsc·build·smoke 통과(케이스 4개). 보고된 모호한 점을 SKILL.md 규칙에 반영(plan.md 9.2). 도구 수정: 핸들러 IMPORT_IS_UNDEFINED 경고 제거(Reflect.get), "use client" 경고 숨김, 스모크가 누른 프리셋·시나리오 수 출력
 - 2026-09-29 3단계 막힌 점 해소: 사용자가 아티팩트(E37LfUYuyNtpjLa5yAoYN9)에서 시나리오 전환 시 화면이 바뀌는 것을 확인
+- 2026-09-29 6.1~6.4 스킬 폴더 review-page/에 package.json·package-lock.json(CodeMirror 등 버전이 이전 pnpm과 같음) 추가, cli.ts가 lockfile 해시로 npm ci. prplay 루트 package.json은 타입 검사 도구만(bin·exports·publishConfig·런타임 의존성 제거), pnpm-workspace.yaml·dist 제거, tsconfig를 review-page/src로
+- 2026-09-29 6.5 scratchpad Knot 복사본에 스킬 폴더·targets/knot 복사: 4케이스 빌드(3.8MB 안팎)·스모크·tsc·dev 서버 확인. 빈 Vite+React에서 init → build example 1006KB → 스모크·tsc 통과
+- 2026-09-29 6.6 README를 스킬 복사·처음 설정·node cli.ts 명령 기준으로 다시 씀(styles 설정 추가)

@@ -99,7 +99,7 @@
 
 | 번호 | 작업 | 참고 |
 | --- | --- | --- |
-| 5.1 | prplay `templates/review-page/SKILL.md` 작성(Knot을 대상으로 돌려 검증)(plan.md 9.2 초안에서 시작). `disable-model-invocation: true`, `allowed-tools` 지정 | §9.1, §9.2 |
+| 5.1 | prplay `review-page/SKILL.md` 작성(Knot을 대상으로 돌려 검증)(plan.md 9.2 초안에서 시작). `disable-model-invocation: true`, `allowed-tools` 지정 | §9.1, §9.2 |
 | 5.2 | 1~4단계 케이스를 `example-component.tsx`(컴포넌트용)와 `example-page.tsx`(페이지+네트워크용) 두 개로 정리해 스킬 폴더에 넣는다 | §9.2 |
 | 5.3 | 프리셋 엣지 케이스 목록(빈 값, 아주 긴 값, 경계 숫자, 빈/긴 배열, 비활성)과 시나리오 규칙을 스킬 규칙에 고정 | §5.2, §9.2 |
 | 5.4 | 검증 단계: `tsc --noEmit` → 빌드 → 실패 시 케이스만 고쳐 재시도, 3회 실패 시 중단 | §9.2 |
@@ -113,20 +113,21 @@
 
 ---
 
-## 6단계. 라이브러리 분리
+## 6단계. 스킬로 묶기
 
-**목표**: `targets/knot/`의 설정을 `review.config.ts` 형식으로 바꾸고, prplay를 다른 프로젝트도 쓸 수 있는 `review-kit` 패키지로 정리한다.
+**목표**: `targets/knot/`의 설정을 `review.config.ts` 형식으로 바꾸고, 리뷰 화면·빌드·스크립트·예시를 스킬 폴더 하나(`review-page/`)에 넣어 대상 프로젝트에 복사만으로 쓰게 한다. npm 패키지로 배포하지 않는다(2026-09-29 방향 변경. 처음에는 `review-kit` 패키지로 분리했었다).
 
 | 번호 | 작업 | 참고 |
 | --- | --- | --- |
-| 6.1 | 패키지 구조 생성: `src/runtime`, `src/build`, `src/cli.ts`, `templates/` | §11.1 |
-| 6.2 | `defineConfig`와 `review.config.ts` 로딩: alias, plugins, svgr, wrapper, repoUrl, baseBranch | §11.2 |
-| 6.3 | CLI: `review-kit build <case>`, `review-kit dev <case>`(Vite dev 서버, HMR), `review-kit init`(설정 파일과 스킬 템플릿 복사) | §11.1 |
-| 6.4 | `react`, `react-dom`, 프로젝트의 CSS-in-JS 라이브러리(Knot는 Emotion)를 peerDependencies로, 런타임은 ESM 라이브러리로 배포 | §11.3 |
-| 6.5 | Knot 적용: PR #366 worktree에 `link:`로 연결하고 `review.config.ts`와 케이스만 두어 빌드·dev 서버를 확인한다(사용자 승인). develop에 넣을지는 사용자가 결정한다 | §11.4 |
-| 6.6 | README: 설치, 설정, 스킬 사용법, 아티팩트 게시 방법, 1장 제약 요약 | §1, §10 |
+| 6.1 | 스킬 폴더 구성: prplay `review-page/`에 `SKILL.md`, 예시, `src/`(index, cli, init, runtime, build), `scripts/`, `templates/`를 모은다. 루트의 `src/`, `templates/`, `dist/`, `tsconfig.build.json`은 없앤다 | §11.1 |
+| 6.2 | `defineConfig`와 `review.config.ts` 로딩: alias, plugins, svgr, wrapper, repoUrl, baseBranch. `review-kit` 이름을 Node resolve hook, Vite alias, 대상 tsconfig `paths` 세 곳에서 `src/index.ts`로 돌린다 | §11.2 |
+| 6.3 | CLI: `node <스킬>/src/cli.ts build <case>`, `dev <case>`(Vite dev 서버, HMR), `init`(설정 파일과 예시 케이스, tsconfig·`.gitignore` 안내) | §11.1 |
+| 6.4 | 의존성: 스킬 폴더의 `package.json`·`package-lock.json`, lockfile 해시가 바뀌면 `cli.ts`가 스킬 폴더에서 `npm ci`. `react`·`react-dom`·`msw`·CSS-in-JS는 `sharedPackages`로 대상 것을 쓴다. npm 배포 설정(`bin`, `exports`, `publishConfig`, 컴파일)은 없앤다 | §11.3 |
+| 6.5 | Knot 적용: scratchpad에 clone한 Knot 복사본에 스킬 폴더를 복사하고 `targets/knot/` 파일을 두어 빌드·dev 서버·`tsc`·스모크를 확인한다. `SKILL.md`에 처음 설정(설정 파일이 없을 때 `init` 후 설정 채우기) 단계를 넣는다 | §9.2, §11.4 |
+| 6.6 | README: 스킬 복사, 처음 설정, 스킬 사용법, 명령, 아티팩트 게시 방법, 1장 제약 요약 | §1, §10 |
 
 **완료 기준**
-- Knot 전용 내용은 `review.config.ts`, 케이스 파일, 스킬뿐이다.
-- 패키지로 바꾼 뒤 기존 케이스의 HTML이 이전과 같이 동작한다.
-- 빈 Vite + React 프로젝트에서 `review-kit init` 후 예시 케이스가 빌드된다.
+- Knot 전용 내용은 `review.config.ts`, `review/`(wrapper, 폰트 CSS, 케이스)뿐이고, 스킬 폴더에는 없다.
+- 스킬 폴더만 복사한 Knot 복사본에서 기존 4케이스가 빌드되고 스모크·`tsc`를 통과하며, 결과 HTML이 스킬로 바꾸기 전과 같다.
+- 빈 Vite + React 프로젝트에 스킬 폴더만 복사하고 `init` 후 예시 케이스가 빌드된다. 대상 `package.json`은 바뀌지 않는다.
+- prplay에 npm 배포 설정과 `dist/`가 없다.
