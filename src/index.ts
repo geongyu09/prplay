@@ -51,6 +51,8 @@ export type ReviewConfig = {
   define?: Record<string, string>;
   // 대상 node_modules에서 가져올 패키지. react, react-dom, msw는 항상 포함 (11.3)
   sharedPackages?: string[];
+  // 미리보기에 넣을 CSS 파일(폰트 @font-face 등). 번들에 인라인된다 (11.2)
+  styles?: string[];
   // ({ initialPath, children }) => ReactNode 컴포넌트를 default export하는 파일 (4.1)
   wrapper?: string;
   // 기존 MSW 핸들러 배열을 default나 `handlers`로 export하는 파일. 시나리오에 없는 요청에 쓴다 (6.1)

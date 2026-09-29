@@ -7,7 +7,7 @@ import mockHandlers from "virtual:review-handlers";
 import propsMeta from "virtual:review-props";
 import sources from "virtual:review-sources";
 
-import "./fonts.css";
+import "virtual:review-styles";
 import shellCss from "./shell.css?inline";
 import { ActionLog, type ActionCall } from "./controls/ActionLog";
 import { AddressBar } from "./controls/AddressBar";

@@ -20,13 +20,24 @@ export async function buildCase(config: ResolvedConfig, casePath: string, pr?: s
       outDir: tmpDir,
       emptyOutDir: true,
       assetsInlineLimit: Number.MAX_SAFE_INTEGER,
+      rolldownOptions: {
+        // "use client" 지시어 경고는 단일 HTML에서 의미가 없다 (plan.md 11.1)
+        onLog(level, log, handler) {
+          if (log.code === "MODULE_LEVEL_DIRECTIVE") return;
+          handler(level, log);
+        },
+      },
     },
   });
 
   const out = path.join(config.outDir, `review-${name}.html`);
   fs.renameSync(path.join(tmpDir, "index.html"), out);
   fs.rmSync(tmpDir, { recursive: true, force: true });
-  const kb = Math.round(fs.statSync(out).size / 1024);
-  console.log(`${path.relative(process.cwd(), out)} (${kb} KB)`);
+  const size = fs.statSync(out).size;
+  console.log(`${path.relative(process.cwd(), out)} (${Math.round(size / 1024)} KB)`);
+  // 아티팩트 페이지 상한은 16MB (plan.md 1.1)
+  const MB = 1024 * 1024;
+  if (size > 16 * MB) console.warn("  16MB를 넘어 아티팩트에 올릴 수 없습니다.");
+  else if (size > 14 * MB) console.warn("  아티팩트 상한(16MB)에 가깝습니다.");
   return out;
 }

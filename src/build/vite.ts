@@ -165,6 +165,17 @@ function wrapperModule(wrapper: string | undefined): Plugin {
   };
 }
 
+// styles의 CSS 파일을 순서대로 import하는 `virtual:review-styles` (plan.md 11.2)
+function stylesModule(files: string[]): Plugin {
+  const id = "virtual:review-styles";
+  return {
+    name: "review-styles",
+    resolveId: (source) => (source === id ? "\0" + id : null),
+    load: (resolved) =>
+      resolved === "\0" + id ? files.map((f) => `import ${JSON.stringify(f)};`).join("\n") : null,
+  };
+}
+
 // 기존 MSW 핸들러 파일을 `virtual:review-handlers`로 주입한다. 없으면 빈 배열 (plan.md 6.1)
 function handlersModule(file: string | undefined): Plugin {
   const id = "virtual:review-handlers";
@@ -174,7 +185,8 @@ function handlersModule(file: string | undefined): Plugin {
     load(resolved) {
       if (resolved !== "\0" + id) return null;
       if (!file) return "export default [];";
-      return `import * as m from ${JSON.stringify(file)};\nexport default m.default ?? m.handlers ?? [];`;
+      // 없는 export를 정적으로 참조하면 번들러가 IMPORT_IS_UNDEFINED 경고를 내므로 Reflect.get으로 읽는다 (plan.md 11.1)
+      return `import * as m from ${JSON.stringify(file)};\nexport default Reflect.get(m, "default") ?? Reflect.get(m, "handlers") ?? [];`;
     },
   };
 }
@@ -200,6 +212,7 @@ export function viteConfig(config: ResolvedConfig, casePath: string, pr?: string
       sourcesModule(casePath, config),
       wrapperModule(config.wrapper),
       handlersModule(config.mockHandlers),
+      stylesModule(config.styles),
       titleHtml(casePath),
     ],
     oxc: { jsx: { runtime: "automatic", importSource: config.jsxImportSource ?? "react" } },

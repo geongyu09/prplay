@@ -9,10 +9,11 @@ const CONFIG_FILE = "review.config.ts";
 // 리뷰 화면이 직접 import하므로 항상 대상 node_modules에서 가져온다 (11.3)
 const BASE_SHARED = ["react", "react-dom", "msw"];
 
-export type ResolvedConfig = Omit<ReviewConfig, "alias" | "wrapper" | "casesDir" | "outDir"> & {
+export type ResolvedConfig = Omit<ReviewConfig, "alias" | "styles" | "wrapper" | "casesDir" | "outDir"> & {
   root: string;
   alias: Record<string, string>;
   sharedPackages: string[];
+  styles: string[];
   wrapper?: string;
   casesDir: string;
   outDir: string;
@@ -39,6 +40,7 @@ export async function loadConfig(cwd = process.cwd()): Promise<ResolvedConfig> {
     root,
     alias: Object.fromEntries(Object.entries(config.alias ?? {}).map(([k, v]) => [k, abs(v)])),
     sharedPackages: [...new Set([...BASE_SHARED, ...(config.sharedPackages ?? [])])],
+    styles: (config.styles ?? []).map(abs),
     wrapper: config.wrapper && abs(config.wrapper),
     mockHandlers: config.mockHandlers && abs(config.mockHandlers),
     casesDir: abs(config.casesDir ?? "review/cases"),

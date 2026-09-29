@@ -47,3 +47,6 @@ declare module "*.css?inline" {
 
 // build.ts define. `review-kit:{PR번호}:{케이스}` (plan.md 7)
 declare const __REVIEW_STORAGE_KEY__: string;
+
+// review.config.ts styles의 CSS 파일들 (plan.md 11.2)
+declare module "virtual:review-styles" {}
