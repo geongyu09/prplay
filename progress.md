@@ -1,0 +1,103 @@
+# 진행 상황
+
+- Knot 경로: /Users/baggeongyu/Documents/Coding/woowacourse/project/2026-Knot (프런트엔드: frontend/)
+- 빌드 대상: /Users/baggeongyu/Documents/Coding/woowacourse/project/2026-Knot-pr366/frontend (PR #366 worktree). 6단계부터 `review-kit`을 link:로 연결하고 `review.config.ts`·`review/`를 둔다(plan.md 11.4, 사용자 승인). 빌드는 그 폴더에서 `pnpm review:build <케이스>`, `pnpm review:dev <케이스>`
+- 코드 위치: 이 저장소(prplay). Knot에는 쓰지 않는다 (plan.md 13장 '작업 위치')
+- (이전 기록) 스파이크를 처음 만든 곳, 2026-09-27 prplay로 옮김: /Users/baggeongyu/Documents/Coding/woowacourse/project/2026-Knot-pr366/frontend (PR #366을 `review-spike/pr-366` 브랜치 worktree로 받음. develop 작업 트리는 건드리지 않음)
+- 시작일: 2026-09-27
+
+## 1단계. 스파이크
+- [x] 1.1 Knot 구조 조사 (결과는 plan.md 2.3 표)
+- [x] 1.2 prplay package.json과 Vite 의존성 설치
+- [x] 1.3 src/build/build.ts
+- [x] 1.4 svgr·define·babel 설정 맞추기
+- [x] 1.5 최소 shell (Provider, Error Boundary)
+- [x] 1.6 케이스 두 개 (Stepper, Breadcrumb)
+- [x] 1.7 단일 HTML 빌드와 file:// 확인
+- [x] 1.8 아티팩트 업로드와 미확인 항목 확인
+- [x] 1.9 (선택) Cosmos·Ladle 단일 파일 빌드 가능 여부
+
+## 2단계. props 컨트롤
+- [x] 2.1 react-docgen 주입
+- [x] 2.2 타입별 컨트롤
+- [x] 2.3 함수 호출 기록 패널
+- [x] 2.4 프리셋
+- [x] 2.5 key 교체로 다시 마운트
+- [x] 2.6 localStorage 저장, JSON 복사/붙여넣기, 초기화
+- [x] 2.7 폭 조절과 CSS 격리
+
+## 3단계. 네트워크 모킹
+- [x] 3.1 startMocking (interceptors + getResponse)
+- [x] 3.2 요청 기록 패널
+- [x] 3.3 페이지 케이스와 시나리오 4개
+- [x] 3.4 시나리오 편집 UI (CodeMirror 6)
+- [x] 3.5 적용 시 QueryClient 새로 만들기
+- [x] 3.6 기존 MSW 핸들러 재사용
+- [x] 3.7 시나리오 localStorage 저장
+
+## 4단계. 코드 패널
+- [x] 4.1 sourcesModule (소스, diff, SHA 링크)
+- [x] 4.2 탭 UI
+- [ ] 4.3 문법 강조 선택과 크기 비교
+- [ ] 4.4 GitHub 링크 열기 또는 복사
+- [ ] 4.5 decisions, impacts와 영향 범위 스크립트
+
+## 5단계. 스킬
+- [ ] 5.1 review-page SKILL.md
+- [ ] 5.2 example-case 두 개
+- [ ] 5.3 엣지 케이스·시나리오 규칙
+- [ ] 5.4 검증 단계
+- [ ] 5.5 (선택) Playwright 스모크 테스트
+- [ ] 5.6 다른 PR 두세 개로 다듬기
+
+## 6단계. 라이브러리 분리
+- [x] 6.1 패키지 구조
+- [x] 6.2 defineConfig와 review.config.ts
+- [ ] 6.3 CLI (build, init)
+- [ ] 6.4 peerDependencies와 ESM 배포
+- [x] 6.5 Knot 적용 방법 정리
+- [ ] 6.6 README
+
+## 확인 항목 (plan.md 14장)
+- [x] 아티팩트 파일 크기 상한 → 16MB(data: URI 포함), 12.6MB 게시 성공
+- [x] 아티팩트에서 외부 이미지와 폰트 로딩이 막히는지 → 막힘(Google Fonts CSS·일부 CDN 스크립트만 허용)
+- [x] 부모 URL hash가 iframe으로 전달되는지 → 단순 #anchor만, #key=value·쿼리는 안 됨
+- [x] 아티팩트 iframe에서 window.open과 새 창 링크가 동작하는지 → window.open 대부분 null, <a target=_blank>는 동작
+- [x] 로그인하지 않은 사람의 아티팩트 열람 가능 여부 → 기본 비공개, Share 메뉴로 공개 가능(로그아웃 실제 확인은 남음)
+- [x] Claude Code에서 아티팩트로 바로 게시하는 경로 → Artifact 도구, 같은 경로 재게시 시 링크 유지
+- [x] Knot의 API 호출 방식과 서버 상태 라이브러리 → axios(SSE만 fetch), TanStack Query v5
+- [x] Knot webpack svgr 옵션을 Vite로 옮겼을 때 아이콘 결과가 같은지 → 같다(size·aria-hidden·focusable·viewBox)
+- [x] React Cosmos, Ladle에 단일 파일 빌드를 붙일 수 있는지 → Ladle 가능(479KB)·Cosmos 직접 합쳐야 가능, 둘 다 ?쿼리+pushState 라우팅이라 직접 만들기 유지
+
+## 단계 완료
+- 2단계 2026-09-27 (완료 기준 4개 file://에서 확인, 아티팩트 게시는 아직)
+
+## 막힌 점
+- 3단계 완료 기준 '아티팩트에서도 모킹 동작'은 사용자 확인 필요: https://claude.ai/artifact/E37LfUYuyNtpjLa5yAoYN9 (네 시나리오 전환, body 편집 후 적용).
+
+## 작업 기록
+- 2026-09-27 1.1 Knot 구조 조사: Emotion·Vite 8(oxc)·axios·TanStack Query·react-router 8 확인, plan.md 2.2/2.3 갱신. #365는 이슈이고 PR은 #366(미머지)
+- 2026-09-27 1.8(진행 중) 점검 페이지를 Artifact 도구로 게시, 확인 항목 6개를 plan.md 1.1 표·7장·8장·14장에 반영. 케이스 빌드 결과 업로드는 1.7 이후
+- 2026-09-27 1.2 worktree에 review/ 생성, vite 8.2.2·vite-plugin-singlefile 2.3.3·pretendard 1.3.9 추가 (vite-plugin-svgr 5.2는 기존)
+- 2026-09-27 1.3~1.4 review/build.ts: virtual:review-case, alias, dedupe(React·Emotion), oxc jsx(Emotion), webpack svgr 옵션(svgo 포함), define
+- 2026-09-27 1.5~1.6 review/shell(Providers·ErrorBoundary·Pretendard 인라인)과 cases/365.tsx(Stepper Harness), cases/365-breadcrumb.tsx
+- 2026-09-27 1.7 review-365.html·review-365-breadcrumb.html 각 2.9MB 단일 파일. Chrome file://에서 콘솔 오류·외부 요청 0, Stepper 이전/다음·비활성 동작, Knot tsc 통과
+- 2026-09-27 1.8(진행 중) 1.7 빌드 결과 두 개(각 2.9MB, 외부 요청 없음)를 Artifact 도구로 게시. 아티팩트 안 렌더링 확인만 남음
+- 2026-09-27 1.8 사용자가 아티팩트에서 Stepper·Breadcrumb 확인: 콘솔 오류 없음, 이전/다음 버튼 동작. 아이콘 크기는 file:// 확인(1.7) 기준
+- 2026-09-27 1.9 Ladle 5.1.1·Cosmos 7.4 단일 파일 빌드 스파이크(scratchpad). 라우팅이 쿼리+pushState라 아티팩트 제약과 맞지 않아 직접 만들기 유지, plan.md 12장·14장 반영
+- 2026-09-27 3.1 review/shell/mock/startMocking.ts(@mswjs/interceptors 0.41.9 추가). Chrome file://·http에서 axios·fetch 가로채기, 501+주소, 지연·500·라우트 변경 반영 확인, tsc 통과. shell 연결은 2단계 뒤. plan.md 6.1 import 예시 수정
+- 2026-09-27 작업 위치 변경: worktree의 review/ 코드를 prplay로 옮김(src/build, src/runtime, targets/knot). Knot은 KNOT_DIR로 참조만 하고, react·emotion·tanstack·react-router·msw는 Knot node_modules에서 가져옴. prplay에서 두 케이스 빌드 결과가 이전과 같음(file://: 콘솔 오류·외부 요청 0, Stepper 버튼, 아이콘 14/12px). tsc는 2단계 진행 중인 main.tsx 1건만 남음. plan.md 13장, 로드맵 SKILL.md·phases.md·템플릿 수정
+- 2026-09-27 2.1 react-docgen 8로 sources 첫 파일 props를 virtual:review-props로 주입 (TS 7은 JS API가 없어 react-docgen-typescript 대신, 사용자 승인)
+- 2026-09-27 2.2~2.3 타입별 컨트롤(string·number·boolean·select·JSON)과 호출 기록 패널. 함수 props 로거는 render 두 번째 인자 actions로 전달
+- 2026-09-27 2.4~2.6 프리셋, props 변경 시 key로 다시 마운트(QueryClient 새로 생성), localStorage `review-kit:{PR}:{케이스}` 저장·JSON 복사/붙여넣기·화면 안 확인 초기화
+- 2026-09-27 2.7 폭 슬라이더(240~1280px), 리뷰 화면 Shadow DOM + 미리보기 slot 격리. Chrome file://에서 완료 기준 4개와 에러 경계 복구 확인, tsc 통과
+- 2026-09-27 3.2 startMocking을 main.tsx에 연결(첫 시나리오), 요청 기록 패널(mock/RequestLog.tsx, requestStore.ts). Chrome file://에서 Knot axios 요청 200·지연, 목 없는 요청 501 빨간 표시 확인. msw·interceptors가 들어가 HTML 2.9MB → 3.3MB. plan.md 6.1에 구현 방식 추가
+- 2026-09-27 3.3 targets/knot/cases/workspace-home.tsx(워크스페이스 홈, initialPath /workspace/1). 시나리오 정상·빈 상태(노션 미연결, 초대 201)·로딩 2000ms·500 에러, body는 Knot DTO Raw 타입으로 satisfies. 시나리오별 임시 빌드로 Chrome file:// 확인(목 누락 0, 콘솔 오류 0). 시나리오 전환 UI는 3.4. plan.md 4.1에 인증·CSRF 메모
+- 2026-09-27 6.1~6.2·6.5 (3단계 도중 사용자 요청) prplay를 review-kit 패키지로(src/index.ts defineCase·defineConfig, src/build/config.ts·vite.ts·build.ts·dev.ts, src/cli.ts). targets/knot → review.config.ts + review/Wrapper.tsx + review/cases/. Knot pr366 worktree에 link: 연결 후 `review:build` 3케이스(3.3MB 안팎, file:// 콘솔 오류 0)와 `review:dev`(localhost:5173, 케이스 수정 HMR 반영) 확인. prplay·Knot tsc 통과. 6.3은 build·dev만(init 남음), 6.4 dist 컴파일 남음
+- 2026-09-27 3.4·3.5 시나리오 패널(mock/ScenarioPanel.tsx, JsonEditor.tsx=CodeMirror 6 lang-json·lint, basicSetup 없이). 버튼 즉시 적용, 편집은 적용 버튼, 원래대로. 적용 시 renderKey로 다시 마운트해 새 QueryClient. 이전 시나리오의 늦은 응답은 기록 제외. workspace-home을 Chrome file://에서 4개 시나리오 전환·body 편집 반영·잘못된 JSON 적용 막힘·원래대로 확인. HTML 3.7MB
+- 2026-09-27 3.6 review.config.ts mockHandlers → virtual:review-handlers, 시나리오 다음에 Knot 기존 핸들러, 없으면 501. 요청 기록에 '기존' 출처 표시. Chrome file://에서 /workspaces가 기존 핸들러로 200, /sse는 501 확인. worktree review.config.ts 동기화
+- 2026-09-27 3.7 편집 시나리오를 { props, scenarios }에 저장(기본값과 다른 것만), JSON 복사/붙여넣기·초기화에 포함. Chrome file://에서 새로고침 유지, 새 브라우저에 붙여넣기 재현, 초기화 후 저장소 비움 확인
+- 2026-09-27 결과 HTML <title>에 케이스 title 주입(vite.ts titleHtml, 'Review · {title}'). plan.md 10장에 규칙 추가
+- 2026-09-27 주소 표시줄(사용자 요청, plan.md 4.1): wrapper에 address(report·connect)를 넘기고 Knot Wrapper의 AddressSync가 useLocation·useNavigate로 연결. 입력+Enter 이동, ↺ initialPath, 다시 마운트 시 보던 주소 유지. workspace-home dev에서 확인, tsc 통과
+- 2026-09-27 단일 컴포넌트 케이스 targets/knot/review/cases/button.tsx(Button: select size·variant, boolean 3개, label은 children을 render에서 채움, 프리셋 6개) 추가, worktree에 복사. `review:build button` 3.7MB, Knot tsc 통과. 브라우저 확인은 남음(Chrome 확장 연결 안 됨). 상속 props(onClick)는 docgen이 못 풀어 호출 기록에 안 남음
+- 2026-09-27 4.1~4.2 sourcesModule(virtual:review-sources: 파일 내용, git diff baseBranch...HEAD, SHA 링크에 show-prefix 붙임)과 미리보기 아래 CodePanel(소스·diff·결정·영향 범위 탭, 링크+복사 버튼). 결정 목록을 오른쪽 패널에서 탭으로 옮김. plan.md 3.3·8장에 구현 규칙 추가. 365·button 빌드 3.7MB, SHA 링크(frontend/ 포함)와 365 diff 주입 확인. 문법 강조는 4.3, 브라우저 화면 확인은 사용자 확인 필요
