@@ -5,10 +5,12 @@ import fs from "node:fs";
 import { buildCase } from "./build/build.ts";
 import { loadConfig, resolveCase } from "./build/config.ts";
 import { devCase } from "./build/dev.ts";
+import { init } from "./init.ts";
 
 const USAGE = `사용법
   review-kit build <케이스>... [--pr 번호]   단일 HTML 빌드
   review-kit dev <케이스> [--port 5173]       dev 서버(HMR)
+  review-kit init [--force]                  설정 파일, 스킬, 예시 케이스 만들기
 케이스는 파일 경로나 casesDir 안의 이름(예: 365)`;
 
 // --name 값 한 쌍을 꺼낸다
@@ -32,6 +34,10 @@ async function main() {
     if (args.length !== 1) throw new Error(USAGE);
     const config = await loadConfig();
     await devCase(config, resolveCase(config, args[0]), port ? Number(port) : undefined);
+    return;
+  }
+  if (command === "init") {
+    init(process.cwd(), args.includes("--force"));
     return;
   }
   throw new Error(USAGE);

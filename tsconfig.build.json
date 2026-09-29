@@ -1,0 +1,16 @@
+{
+  // Node에서 도는 부분만 dist/로 컴파일한다. 리뷰 화면(src/runtime)은 소스 그대로 싣는다 (plan.md 11.3)
+  "include": ["src/index.ts", "src/cli.ts", "src/init.ts", "src/build/**/*.ts"],
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": true,
+    "rewriteRelativeImportExtensions": true,
+    "types": ["node"]
+  }
+}
