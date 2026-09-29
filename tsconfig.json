@@ -1,0 +1,42 @@
+{
+  // Knot 컴포넌트를 import하는 케이스까지 검사한다. Knot 경로는 targets/knot/target.ts의 기본값과 같다
+  "include": ["src/**/*.ts", "src/**/*.tsx", "targets/**/*.ts", "targets/**/*.tsx", "../woowacourse/project/2026-Knot-pr366/frontend/src/global.d.ts", "../woowacourse/project/2026-Knot-pr366/frontend/src/shared/provider/themeProvider/emotion.d.ts"],
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "review-kit": ["./src/index.ts"],
+      "@/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/*"],
+      "@pages/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/pages/*"],
+      "@widgets/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/modules/widgets/*"],
+      "@features/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/modules/features/*"],
+      "@routes/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/shared/routes/*"],
+      "@api/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/shared/api/*"],
+      "@composites/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/shared/components/composites/*"],
+      "@primitives/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/shared/components/primitives/*"],
+      "@constants/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/shared/constants/*"],
+      "@provider/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/shared/provider/*"],
+      "@hooks/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/shared/hooks/*"],
+      "@utils/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/shared/utils/*"],
+      "@store/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/shared/store/*"],
+      "react": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/@types/react"],
+      "react/*": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/@types/react/*"],
+      "react-dom": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/@types/react-dom"],
+      "react-dom/*": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/@types/react-dom/*"],
+      "@emotion/react": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/@emotion/react"],
+      "@emotion/react/*": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/@emotion/react/*"],
+      "@emotion/styled": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/@emotion/styled"],
+      "@tanstack/react-query": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/@tanstack/react-query"],
+      "react-router": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/react-router/dist/production/index.d.ts"],
+      "msw": ["../woowacourse/project/2026-Knot-pr366/frontend/node_modules/msw"]
+    }
+  }
+}
