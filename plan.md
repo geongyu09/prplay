@@ -14,14 +14,14 @@ PR 설명과, PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 �
 
 리뷰어가 링크 하나를 열면 아래 화면이 나온다. PR 하나에 HTML은 하나다(3.4).
 
-- 개요 탭: AI가 정리한 PR 요약, 바뀐 점, 결정 목록, 리뷰 포인트, 플레이그라운드 목록을 보여준다. 처음 열면 이 탭이 보인다.
+- 개요 탭: AI가 정리한 PR 설명을 보여준다. 요약, 배경, 핵심 아이디어와 예시, 구조 그림, 바뀐 점, 코드 흐름, 결정 목록, 리뷰 포인트, 플레이그라운드 목록 순서다. 처음 열면 이 탭이 보인다.
 - 대상 탭: 리뷰 대상(컴포넌트나 페이지)마다 탭이 하나씩 있고, 탭 안에 아래 플레이그라운드가 있다.
 - 미리보기: PR에서 바뀐 실제 컴포넌트나 페이지가 렌더링된다.
 - props 편집: 타입에 맞는 입력 컨트롤로 props를 바꾼다.
 - 프리셋: "아주 긴 제목", "문서 1개" 같은 엣지 케이스를 버튼 하나로 적용한다.
 - 목 데이터 편집: 네트워크 응답(JSON, 상태 코드, 지연)을 웹에서 수정한다.
 - 코드 패널: 실제 소스, PR diff, 파일 경로와 GitHub 링크를 보여준다.
-- 결정 목록: 작성자가 내린 결정을 한 줄씩 최대 5개만 개요 탭에 보여준다.
+- 결정 목록: 작성자가 내린 결정을 이유·버린 대안과 함께 최대 5개만 개요 탭에 보여준다.
 
 역할 분담
 
@@ -194,13 +194,86 @@ export type ReviewCase<P> = {
   impacts?: string[];                      // 영향받는 다른 파일
 };
 
-// PR 개요 (3.4). 결정 목록은 케이스가 아니라 여기에 둔다
+// PR 개요 (3.4). 좋은 리뷰에 필요한 7가지(맥락·길잡이·증거·만져 보기·크기·위험·리뷰 편의) 순서로 쓴다
 export type ReviewPr = {
-  title: string;          // PR 제목
-  summary: string;        // 무엇을 왜 바꿨는지 한두 문장
-  changes: string[];      // 바뀐 점. 최대 5개, 한 문장씩
-  decisions: string[];    // 작성자가 내린 결정. 최대 5개, 한 문장씩
-  reviewPoints: string[]; // 리뷰어가 특히 봐 주길 바라는 곳. 최대 3개, 한 문장씩
+  title: string;            // PR 제목
+  summary: string;          // 무엇을 왜 바꿨는지 한두 문장
+  revisions?: PrRevision[]; // 7. 리뷰 반영 후 바뀐 점. 최신이 앞
+  context: PrContext;       // 1. 맥락
+  intuition?: PrIntuition;  // 1. 핵심 아이디어와 예시
+  diagrams?: PrDiagram[];   // 1. 구조 그림. 최대 2개
+  guide: PrGuide;           // 2. 길잡이
+  evidence: PrEvidence;     // 3. 증거
+  previews?: PrLink[];      // 4. 프리뷰 배포·스토리북 링크
+  size?: string;            // 5. 크기 한마디. 관심사가 여럿이거나 리팩터링이 섞였을 때만
+  risk: PrRisk;             // 6. 위험과 영향 범위
+};
+
+export type PrLink = { label: string; url: string };
+
+export type PrContext = {
+  problem: string[];       // 풀려는 문제와 바뀌기 전 모습. 최대 3문장
+  links?: PrLink[];        // 관련 이슈·티켓
+  basics?: string[];       // 처음 보는 사람을 위한 기존 구조 설명. 최대 4문장. 접혀 있다
+  decisions: PrDecision[]; // 이 방식을 고른 이유. 최대 5개
+  scope: { does: string[]; doesNot: string[] }; // 이번에 하는 것, 일부러 하지 않은 것. 각 최대 3개
+};
+
+export type PrDecision = {
+  choice: string;    // 작성자가 고른 방식 한 문장
+  why: string;       // 고른 이유(제약 포함) 한 문장
+  rejected?: string; // 검토했다가 버린 대안과 버린 이유 한 문장
+};
+
+export type PrIntuition = {
+  idea: string;          // 왜 이렇게 바꿨는지 본질 한두 문장
+  examples: PrExample[]; // 작은 예시 데이터로 보여 주는 그림. 최대 2개
+};
+
+// flow: 단계가 화살표로 이어지는 흐름 그림. compare: 전/후 나란히 비교
+export type PrExample =
+  | { kind: "flow"; caption: string; steps: { label: string; data?: string }[] } // 단계 2~5개
+  | { kind: "compare"; caption: string; before: PrSide; after: PrSide };
+
+export type PrSide = { label: string; data: string }; // data는 여러 줄 텍스트나 코드
+
+// 시퀀스·아키텍처처럼 그림이 있어야 이해가 쉬울 때 쓰는 그림. Mermaid 금지, SVG를 직접 쓴다 (3.4)
+export type PrDiagram = {
+  caption: string; // 그림 설명 한 문장
+  svg: string;     // 직접 쓴 <svg viewBox="...">...</svg> 문자열
+};
+
+export type PrGuide = {
+  changes: string[];          // 변경 요약. 동작·화면 단위, 최대 5개
+  readingOrder: PrCodeStep[]; // 읽는 순서. 최대 5단계
+  focus: string[];            // 집중해서 봐 줬으면 하는 곳(작성자가 확신이 없거나 논의하고 싶은 곳). 최대 3개
+  skim: string[];             // 대충 봐도 되는 곳(자동 생성, 이름만 바꾼 곳, 포맷팅). 최대 3개
+};
+
+export type PrCodeStep = {
+  role: "core" | "side"; // 핵심 파일인지, 다른 변경에 따른 부수 수정인지
+  title: string;    // 이 묶음이 하는 일
+  files: string[];  // 설정 파일 폴더 기준 경로
+  explain: string;  // 1~3문장
+  snippet?: string; // 핵심 줄. 15줄 이내, 원본 그대로
+};
+
+export type PrEvidence = {
+  tests: { file: string; guarantees: string }[]; // 추가·바꾼 테스트와 그 테스트가 보장하는 것. 최대 5개
+  manual: string[]; // 직접 확인한 방법(재현 절차, 환경, 엣지 케이스). 최대 3개
+  ci: { name: string; state: "pass" | "fail" | "pending" | "skip" }[]; // gh pr checks 결과
+};
+
+export type PrRisk = {
+  impact: string[];        // 건드리는 다른 기능·모듈
+  compatibility: string[]; // API·DB 마이그레이션·설정 변경
+  deploy: string[];        // 피처 플래그, 배포 순서, 롤백 방법
+  securityPerf: string[];  // 보안·성능 고려와 측정값
+}; // 각 최대 3개. 없으면 빈 배열이고 화면에 "해당 없음"으로 보인다
+
+export type PrRevision = {
+  since: string;     // 지난 리뷰 때 커밋 SHA
+  changes: string[]; // 그 뒤로 반영한 것. 최대 5개
 };
 
 export type Actions = Record<string, (...args: unknown[]) => void>; // 함수 props 이름 → 호출 기록 로거
@@ -289,9 +362,22 @@ function sourcesModule(casePath: string): Plugin {
 - `pr.ts`는 3.1의 `ReviewPr`를 `definePr`로 default export한다. 스킬은 늘 만들고, 빌드는 없어도 된다(없으면 개요 탭 없이 첫 대상 탭을 연다. `init` 예시처럼 PR이 아닌 폴더용).
 - 케이스 파일은 폴더 안의 `pr.ts`를 뺀 `*.tsx`이고, 탭은 파일 이름 순서다. 탭 이름은 케이스 `title`이다.
 - 빌드: `build <PR 폴더>` → `<outDir>/review-<폴더 이름>.html` 하나. 인자는 폴더 경로나 `casesDir` 안의 폴더 이름(`366`)이다. PR번호는 `--pr`, 없으면 폴더 이름 앞의 숫자다.
-- 가상 모듈 `virtual:review-cases`가 폴더의 케이스 파일을 모두 import하고, 케이스마다 docgen props(5.1)와 소스·diff(3.3)를 함께 내보낸다. `pr.ts`가 있으면 그것도 import한다. PR번호가 숫자이고 `repoUrl`이 있으면 PR 링크(`<repoUrl>/pull/<번호>`)도 만든다.
+- 가상 모듈 `virtual:review-cases`가 폴더의 케이스 파일을 모두 import하고, 케이스마다 docgen props(5.1)와 소스·diff(3.3)를 함께 내보낸다. `pr.ts`가 있으면 그것도 import한다. PR번호가 숫자이고 `repoUrl`이 있으면 PR 링크(`<repoUrl>/pull/<번호>`)도 만든다. 개요의 크기 섹션을 위해 비교 기준과의 `git diff --shortstat`(파일 수, 추가·삭제 줄 수)과 `git log`(커밋 SHA·제목, 오래된 것부터)도 `meta`에 넣는다. git을 쓸 수 없으면 비운다.
 - 화면 맨 위에 제목(`<title>`과 같은 `#PR번호 제목`, PR 링크가 있으면 링크)과 탭을 둔다: `[개요] [대상 1] [대상 2] ...`. 처음 열면 개요 탭이다. 탭이 하나뿐이면 탭 줄을 숨긴다.
-  - 개요 탭: 요약, 바뀐 점, 결정, 리뷰 포인트, 플레이그라운드 목록(대상 `title`과 첫 `sources` 경로. 누르면 그 탭으로 간다), PR 링크, 커밋 SHA와 비교 기준.
+  - 개요 탭: 리뷰어가 PR을 처음 보더라도 이 탭만 읽고 무엇을 왜 바꿨는지, 어디부터 볼지, 무엇이 위험한지 알게 하는 것이 목표다(2026-09-29 사용자 결정). 좋은 리뷰에 필요한 7가지 순서로 섹션을 둔다(2026-09-29 사용자 결정).
+    - 맨 위: `summary`. `revisions`가 있으면 바로 아래 "리뷰 반영 후 바뀐 점"을 최신부터 보여 주고, 항목마다 `<repoUrl>/compare/<since>...<sha>` 링크를 달아 그 뒤로 바뀐 부분만 볼 수 있게 한다.
+    - 1. 맥락: 풀려는 문제(`problem`)와 이슈 링크(`links`), "처음이라면" 접힌 영역(`<details>`)의 `basics`, 결정 목록(`decisions`. 고른 방식, 이유, 버린 대안), 범위(하는 것 / 일부러 하지 않은 것 두 칸). 이어서 핵심 아이디어(`intuition`)와 구조 그림(`diagrams`)을 그린다.
+      - 핵심 아이디어: `idea` 아래에 예시 그림을 그린다. `flow`는 단계 상자를 화살표로 잇고 상자마다 예시 데이터를 고정폭 글꼴로 보여 준다. `compare`는 전/후 상자를 나란히(좁은 화면에서는 위아래로) 둔다.
+      - 구조 그림(2026-09-29 사용자 결정): 시퀀스(모듈·서버 사이 호출 순서)나 아키텍처(컴포넌트·모듈의 관계)처럼 그림이 있어야 이해가 쉬울 때만 `diagrams`에 넣고, 핵심 아이디어 다음에 그린다. **Mermaid 같은 다이어그램 문법·라이브러리는 쓰지 않고 SVG를 직접 쓴다.** SVG는 `viewBox`만 두고 화면 폭에 맞춰 줄어든다(최대 720px). 색은 리뷰 화면 색을 따르도록 `rv-d-*` 클래스(`rv-d-box` 상자, `rv-d-accent` 이번 PR에서 바뀐 상자, `rv-d-line` 선, `rv-d-arrow` 화살표 머리, `rv-d-muted` 보조 글자)를 쓴다. 화면은 넣기 전에 `<script>`, `<foreignObject>`, `on*` 속성, `#`로 시작하지 않는 `href`를 지운다. 읽을 수 없는 SVG면 그 자리에 "그림을 그릴 수 없습니다"를 보여 준다.
+    - 2. 길잡이: 변경 요약(`changes`), 읽는 순서(`readingOrder`), 집중해서 봐 줄 곳(`focus`), 대충 봐도 되는 곳(`skim`).
+      - 읽는 순서: 단계마다 번호, 핵심/부수 표시(`role`), 제목, 파일 경로, 설명, `snippet`(코드 패널과 같은 문법 강조, 첫 `files` 확장자 기준)을 보여 준다.
+    - 3. 증거: 테스트(파일과 보장하는 것), 직접 확인한 방법, CI 결과(상태 표시와 이름). UI 전/후 스크린샷 대신 대상 탭과 `compare` 예시가 그 역할을 한다. 테스트·CI가 비었으면 "추가한 테스트 없음", "CI 결과 없음"을 보여 준다.
+    - 4. 직접 만져 보기: 플레이그라운드 목록(대상 `title`, 첫 `sources` 경로, 프리셋·시나리오 이름. 누르면 그 탭으로 간다)과 `previews` 링크.
+    - 5. 크기: 빌드가 비교 기준과의 차이로 바뀐 파일 수와 추가·삭제 줄 수, 커밋 목록(`repoUrl`이 있으면 커밋 링크)을 채운다. 추가+삭제가 400줄을 넘으면 "커밋 단위로 나눠 읽어 주세요"를 보여 준다. `size`가 있으면 같이 보여 준다.
+    - 6. 위험과 영향 범위: 영향 범위, 호환성, 배포 주의사항, 보안·성능 네 칸. 빈 칸은 "해당 없음"이다.
+    - 7. 리뷰 방법: 코멘트 앞에 `must`(머지 전에 고쳐야 함), `nit`(사소한 제안), `question`(질문)을 붙여 달라는 안내와, 린트·포맷·타입은 CI에 맡기고 설계와 로직을 봐 달라는 안내. 고정 문구다.
+    - 맨 아래: PR 링크, 커밋 SHA와 비교 기준.
+    - `intuition`·`diagrams`·`revisions`·`previews`·`size`가 없으면 그 부분을 그리지 않는다. 나머지는 스킬이 늘 쓴다.
   - 대상 탭: 지금까지의 플레이그라운드(미리보기, 코드 패널, 오른쪽 패널) 그대로다.
 - 탭을 바꾸면 그 대상의 플레이그라운드를 새로 마운트한다. props와 편집한 시나리오는 케이스마다 저장돼 있어(7장) 그대로 돌아오고, 시나리오 선택·호출 기록·요청 기록은 처음부터 시작한다. 모킹 엔진은 하나이고 탭을 바꿀 때 그 대상의 첫 시나리오 라우트로 바꾼다. 개요 탭에서는 미리보기를 그리지 않는다.
 
@@ -472,7 +558,7 @@ export function startMocking(getRoutes: () => MockRoute[]) {
 
 ### 9.1 스킬 기본 지식
 
-- 위치: `.claude/skills/<name>/SKILL.md`. `/<name>`으로 직접 부르거나 Claude가 필요할 때 불러온다.
+- 위치: `.claude/skills/<name>/SKILL.md`. `/<name>`으로 직접 부르거나 Claude가 필요할 때 불러온다. 플러그인에 든 스킬은 `<플러그인>/skills/<name>/SKILL.md`에 두고 `/<플러그인>:<name>`으로 부른다(11장). 이 도구의 스킬은 `/prplay:review-page`다.
 - 스킬 본문은 부를 때만 컨텍스트에 들어간다.
 - frontmatter 주요 필드
   - `description`: 언제 쓰는 스킬인지
@@ -517,13 +603,15 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
 
 구현(5.1~5.4, 2026-09-29): 실제 스킬은 `review-page/SKILL.md`(11.1)이고 위 초안에서 아래가 바뀌었다.
 - 케이스 파일: 처음에는 대상마다 `review/cases/<PR번호>-<이름>.tsx`를 따로 빌드했으나, 지금은 PR 폴더 `review/cases/<PR번호>/`에 `pr.ts`와 대상마다 `<이름>.tsx`(최대 3개)를 쓰고 폴더 하나를 HTML 하나로 빌드한다(3.4). 폴더 이름이 저장 키의 PR번호가 된다(7장).
-- PR 개요(`pr.ts`): PR 본문·커밋·diff를 읽고 요약, 바뀐 점, 결정, 리뷰 포인트를 쓴다. 결정은 케이스에서 여기로 옮겼다.
+- PR 개요(`pr.ts`): PR 본문·커밋·diff와 바뀐 파일 주변 코드를 읽고 요약, 배경, 핵심 아이디어와 예시, 구조 그림(필요할 때만, 직접 쓴 SVG), 바뀐 점, 코드 흐름, 결정, 리뷰 포인트를 쓴다. 결정은 케이스에서 여기로 옮겼다. 예시 데이터는 PR 코드의 실제 타입·필드 이름으로 만든다.
 - `gh pr diff --name-only`는 git 루트 기준 경로라 `git rev-parse --show-prefix`를 떼고 `sources`에 넣는다.
 - 예시는 `example-component.tsx`(컴포넌트)와 `example-page.tsx`(페이지+네트워크) 두 개다.
 - 엣지 케이스 프리셋 목록과 시나리오 규칙을 스킬 본문에 고정한다(5.2, 6장).
-- 검증은 `npx tsc --noEmit` → `node ${CLAUDE_SKILL_DIR}/src/cli.ts build`(11.1) → `scripts/smoke.mjs`(9.4) 순서다. 실패하면 케이스 파일만 고쳐 처음부터 다시 돌리고, 3번 실패하면 멈추고 오류를 보고한다. 케이스 파일 밖(`src/`, `review.config.ts`, wrapper)을 고쳐야 할 것 같으면 고치지 않고 사용자에게 묻는다.
+- 검증은 `npx tsc --noEmit` → 글쓰기 규칙 대조(`writing-rules.md`) → `node ${CLAUDE_SKILL_DIR}/src/cli.ts build`(11.1) → `scripts/smoke.mjs`(9.4) 순서다. 실패하면 케이스 파일만 고쳐 처음부터 다시 돌리고, 3번 실패하면 멈추고 오류를 보고한다. 케이스 파일 밖(`src/`, `review.config.ts`, wrapper)을 고쳐야 할 것 같으면 고치지 않고 사용자에게 묻는다.
 - 처음 설정(6단계, 11장): `review.config.ts`가 없으면 사용자 동의를 받아 `cli.ts init`을 실행하고, 프로젝트의 번들러 설정·tsconfig·`package.json`을 읽어 `alias`, `jsxImportSource`, `define`, `svgr`, `sharedPackages`를 채운다. `wrapper`·`styles`·`mockHandlers`가 필요해 보이면 무엇을 넣을지 사용자에게 제안만 한다. `init`이 안내한 tsconfig·`.gitignore` 변경은 보여 주고 동의를 받아 넣는다. 그다음 예시 케이스를 빌드해 확인하고 PR 케이스 작업으로 넘어간다. 이 단계에서만 케이스 파일 밖을 고친다.
 - 마지막에 결과 HTML 경로와 크기를 알리고, 사용자가 원하면 Artifact 도구로 게시한다(1.1). 게시 후 Share 메뉴로 공유해야 리뷰어가 열 수 있다고 알린다.
+- 사용자 결정(처음 설정 동의, 대상 고르기, 기존 PR 폴더 덮어쓰기, PR 폴더 밖 수정, 아티팩트 게시)은 글로 묻지 않고 AskUserQuestion 선택지로 묻는다. 추천을 첫 선택지에 `(추천)`으로 두어 사용자가 엔터만 눌러도 진행되게 한다.
+- 글쓰기 규칙(2026-09-29 사용자 결정): 스킬이 쓰는 모든 글(`pr.ts` 문자열, 케이스 `title`과 프리셋·시나리오 이름, AskUserQuestion 문구, 끝난 뒤 보고)은 `review-page/writing-rules.md`를 지킨다. 이어지는 맥락의 문장은 한 문장으로 잇고, 요약 선언문 뒤에 같은 묘사를 반복하지 않으며, 금지 표현 목록의 표현을 쓰지 않는다. 검증 단계에서 `pr.ts`를 쓴 뒤 목록과 대조해 고친다.
 - 5.6 시험(2026-09-29): Knot #362(Chip + 유틸), #368(컴포넌트 두 개, props 없는 애니메이션), #346(네트워크 위젯)을 scratchpad 클론에서 스킬 본문만 주고 돌렸다. 셋 다 tsc·빌드·스모크를 첫 시도에 통과했다. 헷갈렸다고 보고된 점을 스킬에 반영했다: 대상 고르기(바뀐 가장 작은 단위, 컴포넌트+유틸, 품는 대상), 케이스 전용 props의 컨트롤 종류와 ReactNode 대체 prop 이름, props 없는 대상, `actions` 범위, 숫자 경계값·비유한 값, 프리셋 12개 상한, 시나리오 4개는 최소이고 조작 뒤 요청·이어지는 id·전역 캐시, 에러 body, PR 본문 읽기(`--json body,commits`)와 본문·diff 불일치 시 diff 우선, `find-impacts.sh`에 넘길 파일과 테스트·목 제외, 빌드 경고 처리, 확인할 수 없는 동작 보고.
 
 ### 9.3 영향 범위 찾기
@@ -557,44 +645,72 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
 
 ---
 
-## 11. 스킬로 배포
+## 11. 플러그인으로 배포
 
-방향(2026-09-29 변경, 사용자 결정): 이 도구는 **스킬 하나로만** 쓴다. npm 패키지로 배포하지 않고, 대상 프로젝트에 설치하는 것도 없다. 리뷰 화면, 빌드, 스크립트, 예시를 모두 스킬 폴더에 넣고, 대상 프로젝트에는 그 폴더를 `.claude/skills/review-page/`로 복사한다. 처음에는 `review-kit` npm 패키지(CLI, `peerDependencies`, `dist/` 컴파일)로 만들었다가 이 방향으로 바꿨다. 바꾸기 전 스파이크(2026-09-29)에서 스킬 폴더만 복사한 Knot 복사본으로 기존 4케이스의 빌드·스모크·`tsc`가 모두 통과했다.
+방향(2026-09-29 변경, 사용자 결정): 이 도구는 **Claude Code 플러그인 `prplay` 하나**로 배포하고, 최종 목표는 플러그인 마켓플레이스 출시다. 플러그인에는 스킬 `review-page` 하나가 들어가며, 리뷰 화면, 빌드, 스크립트, 예시를 모두 그 스킬 폴더에 넣는다. 스킬은 `/prplay:review-page`로 부른다(플러그인 스킬은 `/<플러그인>:<스킬>` 이름을 쓴다). npm 패키지로 배포하지 않고, 대상 프로젝트에 설치하는 패키지도 없다.
 
-### 11.1 스킬 폴더 구성
+바뀐 과정
+- 처음에는 `review-kit` npm 패키지(CLI, `peerDependencies`, `dist/` 컴파일)로 만들었다.
+- 2026-09-29 스킬 폴더 하나를 대상 프로젝트 `.claude/skills/review-page/`로 복사하는 방식으로 바꿨다. 스파이크에서 스킬 폴더만 복사한 Knot 복사본으로 기존 4케이스의 빌드·스모크·`tsc`가 모두 통과했다.
+- 2026-09-29 플러그인 마켓플레이스 배포로 바꿨다(사용자 결정). 복사 방식은 없애고 플러그인 설치만 지원한다.
 
-prplay의 `review-page/`가 스킬 원본이다. 이 폴더를 통째로 대상 프로젝트의 `.claude/skills/review-page/`로 복사한다(받는 방법은 우선 복사. 플러그인 마켓플레이스 등은 정하지 않았다).
+플러그인 기본 지식 (공식 문서 https://code.claude.com/docs/en/plugins/ , 2026-09-29 확인)
+- 플러그인은 `.claude-plugin/plugin.json`(필수 `name`, 그 밖에 `version`, `description`, `author` 등)과 `skills/<이름>/SKILL.md`로 이뤄진다.
+- 마켓플레이스는 git 저장소 루트의 `.claude-plugin/marketplace.json`(`name`, `owner`, `plugins[]`)이다. 플러그인 `source`는 같은 저장소 안 상대 경로(`./plugins/prplay`)로 줄 수 있다.
+- 설치: `/plugin marketplace add <owner>/prplay` → `/plugin install prplay@prplay`. 팀 전체에 켜려면 대상 프로젝트 `.claude/settings.json`의 `extraKnownMarketplaces`와 `enabledPlugins`에 넣는다.
+- 설치하면 플러그인 폴더가 `~/.claude/plugins/` 캐시로 **복사**된다. 업데이트하면 이 복사본이 새것으로 교체되므로 플러그인 폴더(`${CLAUDE_PLUGIN_ROOT}`)에 쓴 파일은 남지 않는다. 업데이트 뒤에도 남는 폴더는 `${CLAUDE_PLUGIN_DATA}`(`~/.claude/plugins/data/<id>/`)다.
+- `plugin.json`에 `version`을 적으면 그 값을 올려야 사용자가 업데이트를 받는다. 서드파티 마켓플레이스는 자동 업데이트가 기본으로 꺼져 있다.
+- 검증: `claude plugin validate <폴더> [--strict]`.
+
+플러그인 실행 환경 (8.1 스파이크, 2026-09-29 Claude Code 2.1.284에서 확인)
+- SKILL.md 본문의 `${CLAUDE_SKILL_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`는 모델에게 보이기 전에 실제 경로로 바뀐다. 캐시 설치면 `~/.claude/plugins/cache/<마켓플레이스>/<플러그인>/<버전>/skills/<스킬>`, 데이터 폴더는 `~/.claude/plugins/data/<플러그인>-<마켓플레이스>`이고, 데이터 폴더는 설치할 때 빈 폴더로 만들어진다.
+- Bash 도구 환경과 `!` 명령 환경에는 `CLAUDE_PLUGIN_DATA`, `CLAUDE_PLUGIN_ROOT`, `CLAUDE_SKILL_DIR`가 **없다**. 그래서 스크립트에 필요한 경로는 본문 치환으로 명령 인자에 넣어 넘긴다(11.3 `--data`).
+- `!` 명령 안의 셸 변수(`$VAR`)는 기본 권한 모드에서 "Contains simple_expansion"으로 막히고 스킬 전체가 실패한다. `!` 명령에는 셸 변수를 쓰지 않는다. `$ARGUMENTS`는 셸보다 먼저 치환되므로 써도 된다.
+- `allowed-tools`의 `Bash(node *probe/probe.mjs *)`처럼 앞에 `*`를 둔 패턴은 캐시 절대 경로 명령과 맞는다. 패턴에 없는 명령은 승인을 요구한다.
+- 로컬 폴더(`directory`) 마켓플레이스로 설치하면 설치 기록은 캐시 경로여도 실제로는 **원본 폴더에서** 실행된다. 캐시 경로 동작은 git 소스(GitHub, 또는 플러그인 소스를 `{ "source": "url", "url": "file://..." }`로 준 경우)로 설치해야 확인된다.
+
+### 11.1 저장소와 플러그인 구성
+
+prplay 저장소가 마켓플레이스이고, 플러그인은 `plugins/prplay/`에 둔다. 저장소 루트를 플러그인으로 쓰지 않는 것은, 설치할 때 `plan.md`·`targets/` 같은 개발 파일까지 캐시로 복사되지 않게 하려는 것이다.
 
 ```
-review-page/
-  SKILL.md                 # /review-page
-  example-component.tsx    # 컴포넌트 케이스 예시
-  example-page.tsx         # 페이지 + 네트워크 케이스 예시
-  example-pr.ts            # PR 개요(pr.ts) 예시
-  package.json             # 빌드 도구와 리뷰 화면 의존성. 이 폴더에 설치한다 (11.3)
-  package-lock.json        # 같은 버전이 설치되도록 함께 둔다
-  src/
-    index.ts     # defineCase, defineConfig, 타입. 케이스·설정 파일이 `review-kit`이라는 이름으로 import한다
-    cli.ts       # build, dev, init
-    init.ts      # 설정 파일과 예시 케이스 만들기
-    runtime/     # 리뷰 화면, 모킹 엔진, 상태 저장
-    build/       # Vite 빌드·dev 서버, 가상 모듈 플러그인, docgen, 설정 파일 로딩
-  scripts/
-    find-impacts.sh
-    smoke.mjs
-  templates/
-    review.config.ts       # init이 복사하는 설정 파일
-    example/               # init이 review/로 복사하는 예시 컴포넌트와 PR 폴더
-      Example.tsx
-      cases/example/pr.ts
-      cases/example/example.tsx
+.claude-plugin/
+  marketplace.json         # name "prplay", owner, plugins: [{ name "prplay", source "./plugins/prplay" }]
+plugins/prplay/
+  .claude-plugin/
+    plugin.json            # name "prplay", version, description, author, repository, license
+  README.md                # 플러그인 설명(설치, 처음 설정, 사용법)
+  LICENSE
+  skills/review-page/      # 스킬 원본 (이전 prplay `review-page/`)
+    SKILL.md               # /prplay:review-page
+    example-component.tsx  # 컴포넌트 케이스 예시
+    example-page.tsx       # 페이지 + 네트워크 케이스 예시
+    example-pr.ts          # PR 개요(pr.ts) 예시
+    package.json           # 빌드 도구와 리뷰 화면 의존성 (11.3)
+    package-lock.json      # 같은 버전이 설치되도록 함께 둔다
+    src/
+      index.ts     # defineCase, defineConfig, 타입. 케이스·설정 파일이 `review-kit`이라는 이름으로 import한다
+      cli.ts       # build, dev, init
+      init.ts      # 설정 파일과 예시 케이스 만들기
+      runtime/     # 리뷰 화면, 모킹 엔진, 상태 저장
+      build/       # Vite 빌드·dev 서버, 가상 모듈 플러그인, docgen, 설정 파일 로딩
+    scripts/
+      find-impacts.sh
+      smoke.mjs
+    templates/
+      review.config.ts       # init이 복사하는 설정 파일
+      example/               # init이 review/로 복사하는 예시 컴포넌트와 PR 폴더
+        Example.tsx
+        cases/example/pr.ts
+        cases/example/example.tsx
 ```
 
-명령 (설정 파일이 있는 프로젝트 폴더에서 `node .claude/skills/review-page/src/cli.ts <명령>`으로 실행한다. 스킬 안에서는 `node ${CLAUDE_SKILL_DIR}/src/cli.ts`)
+명령 (설정 파일이 있는 프로젝트 폴더에서 실행한다. 스킬 안에서는 `node ${CLAUDE_SKILL_DIR}/src/cli.ts <명령> --data ${CLAUDE_PLUGIN_DATA}`(11.3). 플러그인 설치 경로는 사용자 컴퓨터마다 다르므로, 사람이 직접 실행할 때는 스킬에게 부탁하거나 스킬이 보여 준 경로를 쓴다)
 - `build <PR 폴더>... [--pr 번호]`: PR 폴더마다 단일 HTML 하나를 `outDir`에 만든다(3.4). 아티팩트에 올리는 결과물이다.
   - 번들러의 `MODULE_LEVEL_DIRECTIVE`(`"use client"`) 경고는 단일 HTML에서 의미가 없으므로 숨긴다. 기존 MSW 핸들러 파일은 default와 `handlers` 중 있는 것을 쓰되, 없는 export를 정적으로 참조해 경고가 나지 않게 한다(5.6에서 스킬이 설정 문제로 오해했다).
 - `dev <PR 폴더> [--port 5173]`: 같은 설정으로 Vite dev 서버를 띄운다. 케이스 파일이나 컴포넌트를 고치면 바로 반영(HMR)되므로 케이스를 쓰는 동안 확인용으로 쓴다. 단일 파일 플러그인은 빼고, 나머지 플러그인·가상 모듈·alias는 build와 같다. 최종 확인은 build 결과를 `file://`로 연다(10장).
-- `init [--force]`: 현재 폴더에 `review.config.ts`(`templates/review.config.ts`, `git remote get-url origin`이 GitHub면 `repoUrl`을 채움)와 바로 빌드해 볼 수 있는 `review/cases/example/`(`pr.ts`, `example.tsx`)와 `review/Example.tsx`(`templates/example/`)를 만든다. 이미 있는 파일은 건너뛰고 알린다(`--force`면 덮어쓴다). `tsconfig`·`.gitignore`·`package.json`은 고치지 않고 넣을 내용을 출력한다(11.2의 tsconfig 두 줄, `.gitignore`의 `review/dist/`와 `.claude/skills/review-page/node_modules/`). `msw`·`react`·`react-dom`이 설치돼 있지 않으면 설치하라고 알린다. 스킬은 설정 파일이 없을 때 이 명령으로 처음 설정을 한다(9.2).
+- `init [--force]`: 현재 폴더에 `review.config.ts`(`templates/review.config.ts`, `git remote get-url origin`이 GitHub면 `repoUrl`을 채움)와 바로 빌드해 볼 수 있는 `review/cases/example/`(`pr.ts`, `example.tsx`)와 `review/Example.tsx`(`templates/example/`)를 만든다. 이미 있는 파일은 건너뛰고 알린다(`--force`면 덮어쓴다). `tsconfig`·`.gitignore`·`package.json`은 고치지 않고 넣을 내용을 출력한다(11.2의 tsconfig 두 줄, `.gitignore`의 `review/dist/`). `msw`·`react`·`react-dom`이 설치돼 있지 않으면 설치하라고 알린다. 스킬은 설정 파일이 없을 때 이 명령으로 처음 설정을 한다(9.2).
+- 세 명령 모두 시작할 때 `review/review-kit.d.ts`(11.2)가 스킬의 타입과 다르면 새로 쓴다.
 
 ### 11.2 프로젝트 설정 파일
 
@@ -623,37 +739,54 @@ export default defineConfig({
 - `sources`, `impacts` 경로는 설정 파일이 있는 폴더 기준이다.
 - `styles`는 `virtual:review-styles`에서 순서대로 import한다. 리뷰 화면(Shadow DOM)은 시스템 글꼴을 쓰므로 여기 넣은 CSS는 미리보기 쪽 문서에만 적용된다. `url()`의 패키지 경로는 그 CSS 파일 위치(프로젝트 `node_modules`)에서 찾는다.
 
-`review-kit` 이름 풀기: 설치된 패키지가 없으므로 케이스·설정 파일의 `import ... from 'review-kit'`은 세 곳에서 스킬 폴더의 `src/index.ts`로 돌린다.
+`review-kit` 이름 풀기: 설치된 패키지가 없으므로 케이스·설정 파일의 `import ... from 'review-kit'`은 아래 세 곳에서 따로 푼다. Node와 Vite는 실행 중인 스킬 폴더의 `src/index.ts`로 돌리고, 대상 `tsc`는 프로젝트에 둔 타입 선언 파일을 본다. 플러그인은 사용자마다 다른 캐시 경로에 설치되므로 tsconfig에 스킬 경로를 적을 수 없기 때문이다(2026-09-29 사용자 결정).
 
 | 누가 읽나 | 방법 |
 | --- | --- |
 | Node(설정 파일 로딩) | `cli.ts`가 맨 처음 `module.registerHooks`로 `review-kit`을 `src/index.ts`로 돌리는 resolve hook을 건다 |
 | Vite(케이스·wrapper 번들) | `resolve.alias`의 `review-kit` |
-| 대상 `tsc`(스킬 검증 1번) | 대상 tsconfig `compilerOptions.paths`에 `"review-kit": ["./.claude/skills/review-page/src/index.ts"]` 한 줄, `include`에 `review`, `review.config.ts`(넓은 glob이면 이미 덮는다). `init`이 안내하고 스킬이 처음 설정에서 사용자 동의를 받아 넣는다 |
+| 대상 `tsc`(스킬 검증 1번) | 대상 tsconfig `compilerOptions.paths`에 `"review-kit": ["./review/review-kit.d.ts"]` 한 줄, `include`에 `review`, `review.config.ts`(넓은 glob이면 이미 덮는다). `init`이 안내하고 스킬이 처음 설정에서 사용자 동의를 받아 넣는다 |
+
+타입 선언 파일 `review/review-kit.d.ts`
+- `cli.ts`가 `init`·`build`·`dev`를 시작할 때 스킬의 `src/index.ts` 공개 타입으로 만든 선언을 이 파일에 쓴다. 내용이 같으면 쓰지 않는다. 맨 위에 "자동 생성 파일, 고치지 않는다"는 주석을 둔다.
+- 대상 프로젝트에 `vite`, `vite-plugin-svgr`가 없을 수 있으므로 선언 파일은 `react` 타입만 참조한다. `plugins`, `svgr`처럼 Vite 타입을 쓰는 설정 필드는 느슨한 타입으로 바꾼다.
+- 커밋해 둔다. 그래야 플러그인이 없는 CI나 다른 사람의 `tsc`도 통과한다. 플러그인이 업데이트돼 타입이 바뀌면 다음 실행 때 파일이 바뀌어 git diff로 보인다.
 
 ### 11.3 의존성과 주의할 점
 
-- 빌드 도구(Vite, 플러그인, react-docgen)와 리뷰 화면이 쓰는 라이브러리(CodeMirror, `@mswjs/interceptors`, prism)는 스킬 폴더의 `package.json`에 두고 **스킬 폴더 안에** 설치한다. 대상 프로젝트의 `package.json`은 건드리지 않는다. 설치 크기는 약 66MB다.
-  - `cli.ts`는 Node 기본 모듈만 먼저 쓰고, `package-lock.json`의 해시가 `node_modules/.review-page-lock`에 적힌 값과 다르면(처음 실행이거나 스킬을 새로 복사했으면) 스킬 폴더에서 `npm ci`를 돌린 뒤 해시를 적는다. 그다음에 빌드 모듈을 동적 import한다.
+- 빌드 도구(Vite, 플러그인, react-docgen)와 리뷰 화면이 쓰는 라이브러리(CodeMirror, `@mswjs/interceptors`, prism)는 스킬 폴더의 `package.json`에 둔다. 대상 프로젝트의 `package.json`은 건드리지 않는다. 설치 크기는 약 66MB다.
+  - 설치 위치는 `${CLAUDE_PLUGIN_DATA}/node_modules/`다. 플러그인 폴더는 업데이트할 때 교체되므로, 여기에 설치해야 lockfile이 같은 업데이트에서 다시 설치하지 않는다.
+  - `cli.ts`는 Node 기본 모듈만 먼저 쓰고, 스킬 폴더의 `package-lock.json` 해시가 데이터 폴더의 `.review-page-lock`에 적힌 값과 다르면(처음 실행이거나 lockfile이 바뀐 업데이트면) `package.json`·`package-lock.json`을 데이터 폴더로 복사해 `npm ci`를 돌린 뒤 해시를 적는다.
+  - 그다음 스킬 폴더의 `node_modules`를 데이터 폴더 `node_modules`로 가리키는 심볼릭 링크로 만든다(없거나 다른 곳을 가리키면 다시 만든다). 스킬 소스(`src/`)의 import가 Node·Vite 기본 탐색으로 패키지를 찾게 하려는 것이다. 그 뒤에 빌드 모듈을 동적 import한다.
+  - 데이터 폴더 경로는 `--data <경로>` 옵션으로 받는다. Bash 도구 환경에 `CLAUDE_PLUGIN_DATA`가 들어오지 않으므로(11장 '플러그인 실행 환경') SKILL.md 명령에 `--data ${CLAUDE_PLUGIN_DATA}`를 붙이고, 본문 치환으로 실제 경로가 들어간다. 옵션이 없고 `CLAUDE_PLUGIN_DATA` 환경 변수도 없으면(prplay에서 개발할 때) 스킬 폴더에 바로 설치한다.
+  - 심볼릭 링크 `node_modules`는 8.1 스파이크에서 확인했다: 스킬 복사본의 `node_modules`를 데이터 폴더(`npm ci`)로 링크한 상태에서 Knot 복사본 `build 366` 결과가 실제 `node_modules`로 빌드한 것과 바이트 단위로 같았고, 스모크와 dev 서버도 같았다.
   - lockfile은 꼭 같이 둔다. 스파이크에서 `npm install`로 `^` 범위의 더 새 CodeMirror가 들어와 결과 HTML이 링크 방식과 달랐다.
-  - 스킬 폴더를 git에 커밋하는 프로젝트는 `.claude/skills/review-page/node_modules/`를 무시한다.
 - `react`, `react-dom`, `msw`와 CSS-in-JS 라이브러리(Knot는 `@emotion/react`)처럼 컴포넌트와 같은 인스턴스를 써야 하는 패키지는 스킬에 넣지 않고 대상 프로젝트 것을 쓴다. 구현은 `sharedPackages`에 적힌 패키지를 대상 프로젝트 `node_modules`에서 찾는 resolve 플러그인이다(13장 '작업 위치'와 같다). 대상 `tsc`가 `src/index.ts`를 검사할 때 `react` 타입도 대상 것을 쓴다.
 - 리뷰 화면(`src/runtime/`)은 사용자 컴포넌트와 같은 Vite 번들에서 변환되므로 미리 빌드하지 않고 소스 그대로 둔다. Node에서 도는 부분(`cli.ts`, `init.ts`, `build/`)도 컴파일하지 않고 Node 타입 제거로 바로 실행한다. 스킬 폴더는 `node_modules` 안이 아니므로 `.ts` 실행 제한에 걸리지 않는다.
 - Node 22.18 이상이 필요하다(타입 제거가 플래그 없이 켜지는 버전. `module.registerHooks`는 22.15부터).
 - 리뷰 화면 스타일이 사용자 앱 스타일과 충돌하지 않게 CSS 접두사나 Shadow DOM을 쓴다.
 - 처음에는 Vite 빌드만 지원하고, webpack 프로젝트는 설정 파일의 `plugins`와 `svgr` 옵션으로 맞추게 한다.
-- 스킬 업데이트는 prplay의 `review-page/`를 다시 복사하는 것이다. `node_modules`는 lockfile 해시가 바뀌면 다음 실행 때 다시 설치된다.
+- 업데이트는 플러그인 업데이트(`/plugin update prplay@prplay` 또는 자동 업데이트)다. 새 버전을 낼 때는 `plugin.json`의 `version`을 올린다. `node_modules`는 lockfile 해시가 바뀐 경우에만 다음 실행 때 다시 설치된다.
 
 ### 11.4 Knot에 적용하기
 
-Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인은 scratchpad에 clone한 Knot 복사본에서 한다.
+Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인은 scratchpad에 clone한 Knot 복사본에서 한다. 사용자와 같은 경로로 설치해 확인한다.
 
-1. Knot 복사본 `frontend/`에 prplay `review-page/`를 `.claude/skills/review-page/`로 복사한다.
-2. `review.config.ts`, `review/Wrapper.tsx`, `review/fonts.css`, `review/cases/<폴더>/`를 둔다. 원본은 prplay `targets/knot/`에 같은 구조로 있다. 폰트용 `pretendard`(1.3.9)는 복사본의 devDependency로 넣는다(2.3 표).
-3. tsconfig `paths`에 `review-kit` 한 줄을 넣는다(11.2). Knot tsconfig `include`는 `./**/*.ts(x)`라 `review/`가 이미 들어간다.
-4. `node .claude/skills/review-page/src/cli.ts build 366` → `review/dist/review-366.html`(Stepper·Breadcrumb 탭 하나씩), `dev 366` → localhost.
+1. prplay 로컬 경로를 마켓플레이스로 추가하고 플러그인을 설치한다: `claude plugin marketplace add <prplay 경로>` → `claude plugin install prplay@prplay`. 설치 전에 `claude plugin validate <prplay 경로>`가 통과해야 한다. 로컬 폴더 마켓플레이스는 원본 폴더에서 실행되므로(11장 '플러그인 실행 환경'), 캐시 경로와 업데이트 동작은 scratchpad 마켓플레이스에 플러그인 소스를 `file://` git 주소로 줘서 따로 확인한다.
+2. Knot 복사본 `frontend/`에 `review.config.ts`, `review/Wrapper.tsx`, `review/fonts.css`, `review/cases/<폴더>/`를 둔다. 원본은 prplay `targets/knot/`에 같은 구조로 있다. 폰트용 `pretendard`(1.3.9)는 복사본의 devDependency로 넣는다(2.3 표).
+3. tsconfig `paths`에 `review-kit` 한 줄(`./review/review-kit.d.ts`)을 넣는다(11.2). Knot tsconfig `include`는 `./**/*.ts(x)`라 `review/`가 이미 들어간다.
+4. Claude Code에서 `/prplay:review-page 366` 또는 스킬 폴더의 `cli.ts`로 `build 366` → `review/dist/review-366.html`(Stepper·Breadcrumb 탭 하나씩), `dev 366` → localhost.
 
-이전 방식(2026-09-27~29): PR #366 worktree에 `"review-kit": "link:<prplay 경로>"`를 devDependency로 넣고 `review:build`·`review:dev` 스크립트로 빌드했다(사용자 승인). 스킬 방식으로 바꾸며 그 worktree의 설정은 치웠다.
+이전 방식
+- 2026-09-27~29: PR #366 worktree에 `"review-kit": "link:<prplay 경로>"`를 devDependency로 넣고 `review:build`·`review:dev` 스크립트로 빌드했다(사용자 승인). 스킬 방식으로 바꾸며 그 worktree의 설정은 치웠다.
+- 2026-09-29: Knot 복사본에 스킬 폴더를 `.claude/skills/review-page/`로 복사하고 tsconfig `paths`를 스킬 폴더 `src/index.ts`로 걸었다. 플러그인 방식으로 바꾸며 없앤다.
+
+### 11.5 출시
+
+1. **자체 마켓플레이스**: prplay 저장소를 GitHub에 공개하고 `claude plugin validate`가 통과하는 상태로 푸시한다. 사용자는 `/plugin marketplace add <owner>/prplay` → `/plugin install prplay@prplay`로 설치한다. 심사가 없다.
+2. **Anthropic 디렉터리 제출**: https://claude.ai/directory/manage 에서 제출한다(유료 claude.ai 플랜 필요). 승인되면 claude.ai, Cowork, Claude Code에 함께 노출된다. 제출 절차와 요구 사항(라이선스, 설명, 아이콘, 보안 검토 등)은 제출 직전에 https://claude.com/docs/directory/publish 에서 다시 확인한다(14장 확인 항목).
+- `claude-plugins-official` 마켓플레이스는 Anthropic이 직접 관리하며 외부 제출을 받지 않는다.
+- README에는 설치 명령, 요구 사항(Node 22.18 이상, 대상 프로젝트의 `react`·`react-dom`·`msw`), 처음 설정, 아티팩트 게시 방법, 1장 제약 요약을 둔다.
 
 ---
 
@@ -678,16 +811,17 @@ Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인
 - 코드는 처음부터 이 저장소(prplay)에서 개발한다. Knot 저장소에는 파일을 만들거나 고치지 않는다.
 - Knot은 빌드 대상이다. 컴포넌트 소스, `node_modules`, tsconfig를 경로로만 참조한다. 경로는 `KNOT_DIR` 환경 변수로 정하고, 기본값은 `progress.md`의 Knot 경로다.
 - 예외였던 것(2026-09-27~29, 사용자 승인): 라이브러리 링크 테스트를 위해 PR #366 worktree에 `review-kit` 링크, `review.config.ts`, 케이스, `pretendard` devDependency를 넣었다. 스킬 방식(11장)으로 바꾸며 치웠고, 이후 Knot 확인은 scratchpad에 clone한 복사본에 스킬 폴더를 복사해서 한다(11.4).
-- 구조: `review-page/`(스킬 원본. 빌드 스크립트 `src/build/`, 리뷰 화면과 모킹 엔진 `src/runtime/`을 포함한다, 11.1), `targets/knot/`(Knot 전용 `review.config.ts`, `review/Wrapper.tsx`, `review/fonts.css`, `review/cases/`. Knot 복사본에 복사해 쓰는 원본, 11.4).
-- 런타임이 쓰는 `react`, `react-dom`, `@emotion/react`, `@tanstack/react-query`, `react-router`, `msw`는 대상 프로젝트의 `node_modules`에서 가져온다(11.3 `sharedPackages`). 그래야 컴포넌트와 리뷰 화면이 같은 인스턴스를 쓴다. 빌드 도구(Vite, 플러그인, react-docgen)와 `@mswjs/interceptors`는 스킬 폴더(`review-page/`)에 설치한다.
+- 구조: `.claude-plugin/marketplace.json`(마켓플레이스), `plugins/prplay/`(플러그인. 스킬 원본은 `plugins/prplay/skills/review-page/`이고 빌드 스크립트 `src/build/`, 리뷰 화면과 모킹 엔진 `src/runtime/`을 포함한다, 11.1), `targets/knot/`(Knot 전용 `review.config.ts`, `review/Wrapper.tsx`, `review/fonts.css`, `review/cases/`. Knot 복사본에 복사해 쓰는 원본, 11.4).
+- 런타임이 쓰는 `react`, `react-dom`, `@emotion/react`, `@tanstack/react-query`, `react-router`, `msw`는 대상 프로젝트의 `node_modules`에서 가져온다(11.3 `sharedPackages`). 그래야 컴포넌트와 리뷰 화면이 같은 인스턴스를 쓴다. 빌드 도구(Vite, 플러그인, react-docgen)와 `@mswjs/interceptors`는 스킬 폴더 의존성으로 설치한다(11.3).
 
 1. **스파이크**: prplay에서 Knot을 대상으로, #365 Breadcrumb과 Stepper 케이스를 손으로 작성해 단일 HTML로 빌드한 뒤 아티팩트에 올려 실제로 도는지 확인한다. 1장의 미확인 항목(크기 상한, hash 전달, 공개 범위)도 여기서 확인한다.
 2. **props 컨트롤**: react-docgen으로 컨트롤을 자동 생성하고 프리셋과 호출 기록 패널을 붙인다.
 3. **네트워크 모킹**: interceptors와 getResponse로 모킹 엔진을 만들고 네트워크를 쓰는 페이지 하나로 시나리오 편집을 확인한다.
 4. **코드 패널**: 소스, diff, GitHub 링크, 결정 목록, 영향 범위를 붙인다.
 5. **스킬**: 1~4에서 만든 케이스 파일을 예시로 넣어 스킬을 작성하고, 다른 PR 두세 개에 돌려 결과를 고친다.
-6. **스킬로 묶기**: `targets/knot/`의 설정을 `review.config.ts`(`defineConfig`) 형식으로 바꾸고, 리뷰 화면·빌드·스크립트를 스킬 폴더 하나(`review-page/`)에 넣어 복사만으로 쓰게 한다(11장). 처음에는 `review-kit` npm 패키지로 분리했다가 2026-09-29 사용자 결정으로 바꿨다.
+6. **스킬로 묶기**: `targets/knot/`의 설정을 `review.config.ts`(`defineConfig`) 형식으로 바꾸고, 리뷰 화면·빌드·스크립트를 스킬 폴더 하나(`review-page/`)에 넣어 복사만으로 쓰게 한다(11장). 복사 방식은 8단계에서 플러그인 설치로 바꾼다. 처음에는 `review-kit` npm 패키지로 분리했다가 2026-09-29 사용자 결정으로 바꿨다.
 7. **PR 하나에 HTML 하나**: PR 폴더(`pr.ts` + 대상별 케이스)를 HTML 하나로 빌드하고, 맨 위 탭에 개요(PR 설명)와 대상 플레이그라운드를 둔다(3.4). 결정 목록은 케이스에서 개요로 옮긴다.
+8. **플러그인 출시**: 스킬 폴더를 플러그인 `prplay`로 묶어 prplay 저장소를 마켓플레이스로 만들고, 설치 경로에 맞게 의존성 설치 위치와 `review-kit` 타입 파일을 바꾼 뒤, 자체 마켓플레이스로 공개하고 Anthropic 디렉터리에 제출한다(11장). 2026-09-29 사용자 결정.
 
 ---
 
@@ -702,3 +836,7 @@ Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인
 - [x] Knot의 API 호출 방식(fetch인지 axios인지)과 서버 상태 라이브러리 → axios(SSE만 fetch), TanStack Query v5 (2.3 표)
 - [x] Knot webpack svgr 옵션을 Vite로 옮겼을 때 아이콘 결과가 같은지 → 같다 (2.3 스파이크 결과)
 - [x] React Cosmos, Ladle에 단일 파일 빌드를 붙일 수 있는지 → Ladle은 가능, Cosmos는 직접 합쳐야 가능. 둘 다 쿼리 문자열 + `pushState` 라우팅이라 직접 만들기 유지 (12장)
+- [x] Claude Code가 Bash 도구 환경에 `CLAUDE_PLUGIN_DATA`를 넣어 주는지, SKILL.md 본문의 `${CLAUDE_PLUGIN_DATA}`·`${CLAUDE_SKILL_DIR}`가 플러그인 설치 경로로 바뀌는지 → 본문은 바뀌고, Bash·`!` 환경에는 변수가 없다. `--data`로 넘긴다 (11장 '플러그인 실행 환경', 11.3)
+- [x] 플러그인 스킬의 `allowed-tools` 패턴(`Bash(node *review-page/src/cli.ts *)`)이 캐시 경로의 명령과 맞는지 → 맞는다. 로컬 폴더 마켓플레이스는 캐시가 아니라 원본에서 실행된다 (11장 '플러그인 실행 환경')
+- [x] 데이터 폴더 `node_modules`를 심볼릭 링크로 건 스킬 폴더에서 Node·Vite가 패키지를 찾는지 → 찾는다. 빌드 결과 바이트 동일, 스모크·dev 서버 정상 (11.3)
+- [ ] Anthropic 디렉터리 제출 요구 사항과 심사 기간 (11.5)

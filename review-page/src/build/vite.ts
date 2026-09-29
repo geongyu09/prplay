@@ -109,6 +109,24 @@ function git(root: string, args: string[]) {
   }
 }
 
+// 개요 크기 섹션용 비교 기준과의 파일·줄 수와 커밋 목록(오래된 것부터). git을 못 쓰면 비운다 (plan.md 3.4)
+function readSize(root: string, base: string) {
+  const shortstat = git(root, ["diff", "--shortstat", `${base}...HEAD`]) ?? "";
+  const count = (word: string) => Number(shortstat.match(new RegExp(`(\\d+) ${word}`))?.[1] ?? 0);
+  const log = git(root, ["log", "--reverse", "--format=%h%x09%s", `${base}..HEAD`]) ?? "";
+  const commits = log
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [sha, ...subject] = line.split("\t");
+      return { sha, subject: subject.join("\t") };
+    });
+  return {
+    stats: shortstat ? { files: count("files? changed"), additions: count("insertions?"), deletions: count("deletions?") } : null,
+    commits,
+  };
+}
+
 // PR 폴더의 케이스 파일 목록. pr.ts를 뺀 *.tsx를 파일 이름 순서로 (plan.md 3.4)
 export function listCaseFiles(prDir: string) {
   return fs
@@ -119,7 +137,7 @@ export function listCaseFiles(prDir: string) {
 }
 
 // PR 폴더를 `virtual:review-cases`로 주입한다 (plan.md 3.4)
-// default: 케이스마다 { name, case, props(5.1), files(3.3) }, pr: pr.ts 또는 null, meta: PR번호·링크·제목·SHA
+// default: 케이스마다 { name, case, props(5.1), files(3.3) }, pr: pr.ts 또는 null, meta: PR번호·링크·제목·SHA·크기·커밋
 function casesModule(prDir: string, config: ResolvedConfig, meta: { pr: string; prUrl?: string; title: string }): Plugin {
   const id = "virtual:review-cases";
   return {
@@ -150,7 +168,7 @@ function casesModule(prDir: string, config: ResolvedConfig, meta: { pr: string; 
       const lines = [
         fs.existsSync(prFile) ? `export { default as pr } from ${JSON.stringify(prFile)};` : "export const pr = null;",
         ...cases.map((f, i) => `import c${i} from ${JSON.stringify(f)};`),
-        `export const meta = ${JSON.stringify({ ...meta, sha, base })};`,
+        `export const meta = ${JSON.stringify({ ...meta, sha, base, repoUrl: repoUrl?.replace(/\/$/, ""), ...readSize(root, base) })};`,
         `export default [${cases
           .map(
             (f, i) =>

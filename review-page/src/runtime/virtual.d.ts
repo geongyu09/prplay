@@ -25,8 +25,17 @@ declare module "virtual:review-cases" {
 
   // pr.ts. 없으면 null
   export const pr: ReviewPr | null;
-  // title은 <title>과 같은 값(Review · 뒤). git을 못 쓰면 sha가 빈다
-  export const meta: { pr: string; prUrl?: string; title: string; sha: string; base: string };
+  // title은 <title>과 같은 값(Review · 뒤). git을 못 쓰면 sha·stats·commits가 빈다
+  export const meta: {
+    pr: string;
+    prUrl?: string;
+    repoUrl?: string;
+    title: string;
+    sha: string;
+    base: string;
+    stats: { files: number; additions: number; deletions: number } | null;
+    commits: { sha: string; subject: string }[];
+  };
   const cases: CaseEntry[];
   export default cases;
 }

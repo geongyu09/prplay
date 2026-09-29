@@ -66,6 +66,16 @@
 - [x] 7.5 스킬·예시·init·targets를 PR 폴더로
 - [x] 7.6 Knot 확인과 README
 
+## 8단계. 플러그인 출시
+- [x] 8.1 플러그인 환경 확인 스파이크
+- [ ] 8.2 저장소·플러그인 구성과 validate
+- [ ] 8.3 의존성을 CLAUDE_PLUGIN_DATA에 설치
+- [ ] 8.4 review-kit.d.ts와 init 안내
+- [ ] 8.5 SKILL.md 호출 이름·명령
+- [ ] 8.6 Knot·빈 프로젝트 적용과 업데이트 확인
+- [ ] 8.7 README
+- [ ] 8.8 GitHub 공개와 디렉터리 제출
+
 ## 확인 항목 (plan.md 14장)
 - [x] 아티팩트 파일 크기 상한 → 16MB(data: URI 포함), 12.6MB 게시 성공
 - [x] 아티팩트에서 외부 이미지와 폰트 로딩이 막히는지 → 막힘(Google Fonts CSS·일부 CDN 스크립트만 허용)
@@ -76,6 +86,10 @@
 - [x] Knot의 API 호출 방식과 서버 상태 라이브러리 → axios(SSE만 fetch), TanStack Query v5
 - [x] Knot webpack svgr 옵션을 Vite로 옮겼을 때 아이콘 결과가 같은지 → 같다(size·aria-hidden·focusable·viewBox)
 - [x] React Cosmos, Ladle에 단일 파일 빌드를 붙일 수 있는지 → Ladle 가능(479KB)·Cosmos 직접 합쳐야 가능, 둘 다 ?쿼리+pushState 라우팅이라 직접 만들기 유지
+- [x] CLAUDE_PLUGIN_DATA가 Bash 환경에 들어오는지, SKILL.md 본문 변수 치환 → 본문은 치환, Bash·! 환경엔 없음(--data로 넘김)
+- [x] 캐시 경로에서 allowed-tools 패턴 일치 → 일치(로컬 폴더 마켓플레이스는 원본에서 실행)
+- [x] 심볼릭 링크 node_modules에서 Node·Vite 패키지 탐색 → 찾음, build 366 바이트 동일
+- [ ] Anthropic 디렉터리 제출 요구 사항과 심사 기간
 
 ## 단계 완료
 - 2단계 2026-09-27 (완료 기준 4개 file://에서 확인, 아티팩트 게시는 아직)
@@ -130,3 +144,8 @@
 - 2026-09-29 6.5 scratchpad Knot 복사본에 스킬 폴더·targets/knot 복사: 4케이스 빌드(3.8MB 안팎)·스모크·tsc·dev 서버 확인. 빈 Vite+React에서 init → build example 1006KB → 스모크·tsc 통과
 - 2026-09-29 6.6 README를 스킬 복사·처음 설정·node cli.ts 명령 기준으로 다시 씀(styles 설정 추가)
 - 2026-09-29 7.1~7.6 PR 하나에 HTML 하나(사용자 결정, plan.md 3.4): PR 폴더 `review/cases/<PR번호>/`(pr.ts + 대상별 케이스), `definePr`, `virtual:review-cases`(케이스·props·소스 묶음, pr, meta), 맨 위 탭과 개요 탭(Overview.tsx), 플레이그라운드를 Playground.tsx로 분리(탭 전환 시 activateCase로 라우트 교체), 케이스별 저장 키, 코드 패널 결정 탭 제거, 스모크 탭 순회. targets 365 → 366 폴더(PR번호), button에 pr.ts, 스킬·예시(example-pr.ts)·init 템플릿·README 갱신
+- 2026-09-29 방향 변경(사용자 결정): 플러그인 마켓플레이스 출시가 최종 목표. 플러그인 이름 prplay(`/prplay:review-page`), 스킬 폴더 복사 방식 폐지, tsc용 `review/review-kit.d.ts`, 의존성은 `${CLAUDE_PLUGIN_DATA}`에 설치, 자체 마켓플레이스 후 디렉터리 제출. plan.md 9.1·11·13·14장, phases.md 8단계 추가
+- 2026-09-29 8.1 scratchpad 빈 플러그인(spike)을 기본 권한 모드 `claude -p`로 확인: 본문 `${CLAUDE_SKILL_DIR}`·`${CLAUDE_PLUGIN_ROOT}`·`${CLAUDE_PLUGIN_DATA}` 치환됨, Bash·`!` 환경엔 세 변수 없음, `!` 안 `$VAR`는 simple_expansion으로 막힘(`$ARGUMENTS`는 됨), `allowed-tools` `*` 패턴이 캐시 경로와 맞음, directory 마켓플레이스는 원본 폴더에서 실행(캐시 확인은 file:// git 소스). 링크 node_modules로 Knot 복사본 build 366 바이트 동일·스모크·dev 정상. plan.md 11장·11.1·11.3·11.4·14장, phases.md 8.3·8.6 반영. 스파이크 플러그인은 제거
+- 2026-09-29 개요 탭 설명 보강(사용자 요청, plan.md 0장·3.1·3.4·9.2): ReviewPr에 background(basics 접힘·context)·intuition(idea + flow/compare 예시 그림)·codeWalk(단계별 설명·snippet) 추가, Overview.tsx·shell.css(좁은 화면은 세로 배치), SKILL.md 'PR 개요' 규칙, example-pr.ts·targets/knot 366 pr.ts. scratchpad Knot #366 복사본에서 build 3800KB·스모크 통과, 1200px·390px 화면 확인
+- 2026-09-29 개요 탭 구조 그림(사용자 결정, plan.md 0장·3.1·3.4·9.2): ReviewPr에 diagrams(caption + 직접 쓴 SVG, Mermaid 금지) 추가, Overview.tsx '구조' 섹션(script·foreignObject·on*·바깥 href 제거, 못 읽으면 안내 문구), shell.css rv-d-* 클래스, SKILL.md 그림 규칙, example-pr.ts·targets/knot 366 pr.ts 예시. scratchpad Knot 복사본 build 366(3801KB)·스모크 통과, 1200px 화면 확인
+- 2026-09-29 개요를 좋은 리뷰 7가지로 재구성(사용자 요청, plan.md 0장·3.1·3.4·9.2): ReviewPr를 revisions·context(problem·links·basics·decisions{choice,why,rejected}·scope)·guide(changes·readingOrder{role}·focus·skim)·evidence(tests·manual·ci)·previews·size·risk로 바꾸고, 빌드가 meta에 파일·줄 수와 커밋 목록을 넣는다. 섹션 7(must/nit/question)은 고정 문구. SKILL.md 'PR 개요' 규칙(gh pr checks, 리뷰 기록 읽기), Overview.tsx·shell.css, example-pr.ts·템플릿·targets/knot(366, button)·README 갱신. scratchpad Knot 복사본에서 tsc·366/button/workspace-home 빌드·스모크 통과, 1200px 화면 확인

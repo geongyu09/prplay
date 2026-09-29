@@ -24,13 +24,82 @@ export type ReviewCase<P> = {
 };
 
 // PR 폴더의 pr.ts. 결과 HTML의 개요 탭이 된다 (plan.md 3.4)
+// 좋은 리뷰에 필요한 7가지(맥락·길잡이·증거·만져 보기·크기·위험·리뷰 편의) 순서
 export type ReviewPr = {
   title: string;
   summary: string;
-  changes: string[];
-  decisions: string[];
-  reviewPoints: string[];
+  revisions?: PrRevision[];
+  context: PrContext;
+  intuition?: PrIntuition;
+  diagrams?: PrDiagram[];
+  guide: PrGuide;
+  evidence: PrEvidence;
+  previews?: PrLink[];
+  size?: string;
+  risk: PrRisk;
 };
+
+export type PrLink = { label: string; url: string };
+
+export type PrContext = {
+  problem: string[];
+  links?: PrLink[];
+  // 처음 보는 사람용. 화면에서 접혀 있다
+  basics?: string[];
+  decisions: PrDecision[];
+  scope: { does: string[]; doesNot: string[] };
+};
+
+// rejected: 검토했다가 버린 대안과 이유
+export type PrDecision = { choice: string; why: string; rejected?: string };
+
+export type PrIntuition = {
+  idea: string;
+  examples: PrExample[];
+};
+
+// flow: 단계를 화살표로 잇는 그림, compare: 전/후 나란히
+export type PrExample =
+  | { kind: "flow"; caption: string; steps: { label: string; data?: string }[] }
+  | { kind: "compare"; caption: string; before: PrSide; after: PrSide };
+
+export type PrSide = { label: string; data: string };
+
+// 시퀀스·아키텍처 그림. Mermaid 없이 직접 쓴 <svg viewBox> 문자열 (plan.md 3.4)
+export type PrDiagram = { caption: string; svg: string };
+
+export type PrGuide = {
+  changes: string[];
+  readingOrder: PrCodeStep[];
+  focus: string[];
+  skim: string[];
+};
+
+export type PrCodeStep = {
+  // core: 핵심 파일, side: 다른 변경에 따른 부수 수정
+  role: "core" | "side";
+  title: string;
+  files: string[];
+  explain: string;
+  snippet?: string;
+};
+
+export type PrEvidence = {
+  tests: { file: string; guarantees: string }[];
+  manual: string[];
+  ci: { name: string; state: "pass" | "fail" | "pending" | "skip" }[];
+};
+
+// 빈 배열은 화면에 "해당 없음"으로 보인다
+export type PrRisk = {
+  impact: string[];
+  compatibility: string[];
+  deploy: string[];
+  securityPerf: string[];
+};
+
+// since: 지난 리뷰 때 커밋 SHA
+export type PrRevision = { since: string; changes: string[] };
 
 // 함수 props 이름 → 호출 기록 로거 (plan.md 5.1)
 export type Actions = Record<string, (...args: unknown[]) => void>;

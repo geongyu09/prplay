@@ -4,7 +4,17 @@ import { definePr } from "review-kit";
 export default definePr({
   title: "예시 컴포넌트 추가",
   summary: "리뷰 페이지가 어떻게 보이는지 확인하려고 만든 예시 PR 개요다.",
-  changes: ["Example이 인사말과 숫자를 보여 준다."],
-  decisions: ["예시라서 결정은 하나만 적는다."],
-  reviewPoints: ["'아주 긴 인사말' 프리셋에서 줄바꿈 모양을 봐 주세요."],
+  context: {
+    problem: ["리뷰 페이지를 처음 설정한 뒤 빌드가 되는지 확인할 예시가 필요했다."],
+    decisions: [{ choice: "예시라서 결정은 하나만 적는다.", why: "개요 모양만 보여 주면 된다." }],
+    scope: { does: ["Example 컴포넌트를 추가한다."], doesNot: ["실제 화면에는 넣지 않는다."] },
+  },
+  guide: {
+    changes: ["Example이 인사말과 숫자를 보여 준다."],
+    readingOrder: [],
+    focus: ["'아주 긴 인사말' 프리셋에서 줄바꿈 모양을 봐 주세요."],
+    skim: [],
+  },
+  evidence: { tests: [], manual: [], ci: [] },
+  risk: { impact: [], compatibility: [], deploy: [], securityPerf: [] },
 });

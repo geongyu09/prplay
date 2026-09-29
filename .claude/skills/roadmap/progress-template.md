@@ -63,6 +63,16 @@
 - [ ] 7.5 스킬·예시·init·targets를 PR 폴더로
 - [ ] 7.6 Knot 확인과 README
 
+## 8단계. 플러그인 출시
+- [ ] 8.1 플러그인 환경 확인 스파이크
+- [ ] 8.2 저장소·플러그인 구성과 validate
+- [ ] 8.3 의존성을 CLAUDE_PLUGIN_DATA에 설치
+- [ ] 8.4 review-kit.d.ts와 init 안내
+- [ ] 8.5 SKILL.md 호출 이름·명령
+- [ ] 8.6 Knot·빈 프로젝트 적용과 업데이트 확인
+- [ ] 8.7 README
+- [ ] 8.8 GitHub 공개와 디렉터리 제출
+
 ## 확인 항목 (plan.md 14장)
 - [ ] 아티팩트 파일 크기 상한
 - [ ] 아티팩트에서 외부 이미지와 폰트 로딩이 막히는지
@@ -73,6 +83,10 @@
 - [ ] Knot의 API 호출 방식과 서버 상태 라이브러리
 - [ ] Knot webpack svgr 옵션을 Vite로 옮겼을 때 아이콘 결과가 같은지
 - [ ] React Cosmos, Ladle에 단일 파일 빌드를 붙일 수 있는지
+- [ ] CLAUDE_PLUGIN_DATA가 Bash 환경에 들어오는지, SKILL.md 본문 변수 치환
+- [ ] 캐시 경로에서 allowed-tools 패턴 일치
+- [ ] 심볼릭 링크 node_modules에서 Node·Vite 패키지 탐색
+- [ ] Anthropic 디렉터리 제출 요구 사항과 심사 기간
 
 ## 단계 완료
 

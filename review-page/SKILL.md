@@ -3,7 +3,7 @@ name: review-page
 description: 현재 브랜치(또는 인자로 준 번호)의 PR을 리뷰 페이지 HTML 하나로 만든다. PR 설명(개요 탭)과, 바뀐 컴포넌트·페이지를 리뷰어가 직접 만져 볼 수 있는 플레이그라운드(대상 탭)가 들어간다. 처음이면 설정 파일부터 만든다.
 argument-hint: "[PR번호]"
 disable-model-invocation: true
-allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git log *) Bash(git rev-parse *) Bash(npx tsc *) Bash(node *review-page/src/cli.ts *) Bash(bash *find-impacts.sh *) Bash(node *smoke.mjs *) Read Grep Glob Write Edit
+allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(gh pr checks *) Bash(git diff *) Bash(git log *) Bash(git rev-parse *) Bash(npx tsc *) Bash(node *review-page/src/cli.ts *) Bash(bash *find-impacts.sh *) Bash(node *smoke.mjs *) Bash(gh pr list *) Read Grep Glob Write Edit AskUserQuestion Artifact
 ---
 
 # 리뷰 페이지 만들기
@@ -12,30 +12,44 @@ PR 하나에 PR 폴더 `review/cases/<PR번호>/` 하나를 만들고, 빌드하
 
 ## PR 정보
 
-- PR: !`gh pr view $ARGUMENTS --json number,title,baseRefName -q '"#\(.number) \(.title) (base: \(.baseRefName))"' 2>/dev/null || echo "(PR을 찾지 못함. /review-page <PR번호>로 다시 부르거나 번호를 사용자에게 묻는다)"`
+- PR: !`gh pr view $ARGUMENTS --json number,title,baseRefName -q '"#\(.number) \(.title) (base: \(.baseRefName))"' 2>/dev/null || echo "(PR을 찾지 못함. gh pr list --limit 4로 열린 PR을 받아 어느 PR로 할지 묻는다)"`
 - 바뀐 파일(git 루트 기준): !`gh pr diff $ARGUMENTS --name-only 2>/dev/null || echo "(없음)"`
 - 이 폴더의 git 루트 기준 위치(바뀐 파일 경로에서 떼어 낸다): !`git rev-parse --show-prefix`
 - 설정 파일: !`ls review.config.ts 2>/dev/null || echo "(없음. 아래 '처음 설정'을 먼저 한다)"`
 - 기존 PR 폴더: !`ls review/cases 2>/dev/null || echo "(없음)"`
 
+## 글쓰기 규칙
+
+이 스킬이 쓰는 모든 글(`pr.ts` 문자열, 케이스 `title`과 프리셋·시나리오 이름, AskUserQuestion 문구, '끝나면' 보고)은 **`${CLAUDE_SKILL_DIR}/writing-rules.md`를 지킨다.** 글을 쓰기 전에 이 파일을 읽는다. 이어지는 맥락의 문장은 한 문장으로 잇고, 요약 선언문 뒤에 같은 묘사를 반복하지 않으며, 금지 표현 목록의 표현은 쓰지 않는다. 아래 항목별 분량 규칙과 부딪히면 분량 규칙을 지키는 안에서 문장을 잇는다.
+
+## 묻는 방법
+
+사용자에게 결정을 받을 때는 글로 묻지 않고 **AskUserQuestion 도구**로 묻는다. 사용자가 타이핑 없이 엔터만 눌러도 진행되게 하기 위해서다.
+- 추천하는 선택지를 첫 번째에 두고 label 끝에 `(추천)`을 붙인다.
+- 선택지는 2~4개, label은 짧게, description은 한 문장으로 쓴다.
+- 서로 관계없는 질문은 한 번의 호출에 묶는다(최대 4개).
+- 묻는 곳은 아래 본문에 **[묻기]**로 표시했다. 그 밖에서는 묻지 않고 진행한다.
+
 모든 명령은 `review.config.ts`가 있는 폴더에서 실행한다. 빌드 명령은 `node ${CLAUDE_SKILL_DIR}/src/cli.ts`다. 처음 실행하면 이 스킬 폴더에 빌드 도구를 설치(`npm ci`, 약 66MB)하므로 시간이 걸린다.
 
 ## 처음 설정
 
-설정 파일이 **없을 때만** 한다. 있으면 '할 일'로 넘어간다. 프로젝트 루트(`package.json`이 있는 폴더)가 여기가 아니면 사용자에게 어느 폴더에서 할지 묻는다.
+설정 파일이 **없을 때만** 한다. 있으면 '할 일'로 넘어간다. 프로젝트 루트(`package.json`이 있는 폴더)가 여기가 아니면 **[묻기]** 후보 폴더를 선택지로 보여 주고 고르게 한다.
 
-1. 사용자에게 설정 파일과 예시 케이스를 만든다고 알리고 동의를 받는다.
+1. **[묻기]** 설정 파일과 예시 케이스를 만들지 묻는다. 선택지: `설정 시작 (추천)`, `그만두기`.
 2. `node ${CLAUDE_SKILL_DIR}/src/cli.ts init`을 실행한다. `review.config.ts`, `review/Example.tsx`, `review/cases/example.tsx`가 생기고, tsconfig·`.gitignore`에 넣을 내용과 설치할 패키지가 출력된다.
-3. 프로젝트의 번들러 설정(`vite.config.*`, `webpack.config.*`), tsconfig, `package.json`을 읽어 `review.config.ts`를 채운다: `alias`(tsconfig `paths`와 같게), `jsxImportSource`(CSS-in-JS), `define`(코드가 읽는 `process.env.*` 등), `svgr`(SVG를 컴포넌트로 import하면 그 옵션), `sharedPackages`(Context를 쓰는 CSS-in-JS·라우터·서버 상태 라이브러리). `wrapper`·`styles`·`mockHandlers`는 필요해 보이면(전역 Provider, CDN 폰트, 기존 MSW 핸들러) 무엇을 넣을지 사용자에게 제안만 한다.
-4. `init`이 출력한 tsconfig 변경(`paths`의 `review-kit` 한 줄, `include`)과 `.gitignore` 줄, 설치할 패키지를 보여 주고 동의를 받아 넣는다.
-5. `node ${CLAUDE_SKILL_DIR}/src/cli.ts build example`로 예시가 빌드되는지 확인한다. 실패하면 설정 파일을 고쳐 다시 한다(3번 실패하면 멈추고 보고). 예시 파일은 사용자가 원하면 지운다.
+3. 프로젝트의 번들러 설정(`vite.config.*`, `webpack.config.*`), tsconfig, `package.json`을 읽어 `review.config.ts`를 채운다: `alias`(tsconfig `paths`와 같게), `jsxImportSource`(CSS-in-JS), `define`(코드가 읽는 `process.env.*` 등), `svgr`(SVG를 컴포넌트로 import하면 그 옵션), `sharedPackages`(Context를 쓰는 CSS-in-JS·라우터·서버 상태 라이브러리). `wrapper`·`styles`·`mockHandlers`가 필요해 보이면(전역 Provider, CDN 폰트, 기존 MSW 핸들러) **[묻기]** 넣을 후보를 `multiSelect`로 보여 주고, 고른 것만 넣는다.
+4. **[묻기]** `init`이 출력한 tsconfig 변경(`paths`의 `review-kit` 한 줄, `include`)과 `.gitignore` 줄, 설치할 패키지를 description에 요약하고 묻는다. 선택지: `모두 넣기 (추천)`, `패키지 설치만 빼기`, `넣지 않기`.
+5. `node ${CLAUDE_SKILL_DIR}/src/cli.ts build example`로 예시가 빌드되는지 확인한다. 실패하면 설정 파일을 고쳐 다시 한다(3번 실패하면 멈추고 보고). **[묻기]** 예시 파일을 지울지 묻는다. 선택지: `지우기 (추천)`, `남기기`.
 6. PR 케이스 작업('할 일')으로 넘어간다.
 
 이 단계에서만 PR 폴더 밖(설정 파일, tsconfig, `.gitignore`)을 고친다.
 
 ## 할 일
 
+0. 기존 PR 폴더에 이 PR 번호가 있으면 **[묻기]** 선택지: `다시 만들기 (추천)`, `그만두기`.
 1. 바뀐 파일 중 **화면에 그려지는 것**(컴포넌트, 페이지)을 고른다. 리뷰할 대상은 최대 3개이고, 대상마다 탭이 하나 생긴다.
+   - 후보가 둘 이상이면 **[묻기]** 아래 기준으로 고른 후보를 `multiSelect`로 보여 준다. 추천 대상에 `(추천)`을 붙이고, description에 고른 이유를 한 문장으로 쓴다. 후보가 하나면 묻지 않는다.
    - 바뀐 가장 작은 단위를 고른다. 바뀐 것이 카드(위젯)면 카드를, 페이지 파일 자체가 바뀌었으면 페이지를 대상으로 한다. 카드를 쓰는 페이지는 `impacts`에 넣는다.
    - 훅·유틸·스타일만 바뀐 PR이면 그 훅이나 유틸을 쓰는 가장 가까운 컴포넌트를 고른다.
    - 컴포넌트와 그 입력을 만드는 유틸이 함께 바뀌었으면 유틸의 입력을 케이스 props로 받아 `render`에서 변환해 넘긴다(예: 초 → `formatDuration(seconds)` → `<Chip>`).
@@ -49,7 +63,7 @@ PR 하나에 PR 폴더 `review/cases/<PR번호>/` 하나를 만들고, 빌드하
 5. 영향 범위를 찾는다: `bash ${CLAUDE_SKILL_DIR}/scripts/find-impacts.sh <파일>...`. 넘길 파일은 대상 파일과 PR에서 바뀐 공용 모듈(다른 곳에서도 import하는 훅·유틸·컴포넌트)이다. 이름만 보고 찾으므로 결과를 훑어 관계없는 파일, 테스트(`test`·`spec`·`__test__`), 목(`mock`), 스토리는 빼고 `impacts`에 넣는다.
 6. 아래 '검증'을 통과시킨다.
 
-**PR 폴더 밖은 고치지 않는다.** `src/`, `review.config.ts`, wrapper, `package.json`을 고쳐야 빌드된다고 판단되면 고치지 말고 이유와 함께 사용자에게 묻는다.
+**PR 폴더 밖은 고치지 않는다.** `src/`, `review.config.ts`, wrapper, `package.json`을 고쳐야 빌드된다고 판단되면 고치지 말고 **[묻기]** 이유를 question에 쓰고 묻는다. 선택지: `고치고 계속 (추천)`, `여기서 멈추기`. 고치고 계속이면 그 파일만 고친다.
 
 ## 케이스 규칙
 
@@ -101,21 +115,67 @@ PR 하나에 PR 폴더 `review/cases/<PR번호>/` 하나를 만들고, 빌드하
 
 ## PR 개요 (pr.ts)
 
-`definePr({ title, summary, changes, decisions, reviewPoints })`를 default export한다. 리뷰어가 플레이그라운드를 열기 전에 읽는 글이다. 모든 항목은 diff·PR 본문·커밋에서 근거가 있는 것만 쓰고, 본문과 diff가 다르면 diff를 따른다. 문장은 완결된 한 문장으로 쓴다.
+`definePr({ title, summary, revisions, context, intuition, diagrams, guide, evidence, previews, size, risk })`를 default export한다. 리뷰어가 플레이그라운드를 열기 전에 읽는 글이다. **이 PR을 처음 보는 리뷰어가 개요만 읽고 무엇을 왜 바꿨는지, 어디부터 볼지, 무엇이 위험한지 아는 것**이 목표다. 좋은 리뷰에 필요한 7가지(맥락, 길잡이, 증거, 직접 만져 보기, 크기, 위험, 리뷰 편의) 순서로 쓴다. 모든 항목은 diff·PR 본문·커밋·CI·리뷰 기록과 직접 읽은 코드에서 근거가 있는 것만 쓰고, 본문과 diff가 다르면 diff를 따른다. 근거가 없는 칸은 지어내지 않고 빈 배열로 둔다(화면이 "해당 없음"을 보여 준다). 문장은 완결된 한 문장으로 쓴다.
+
+쓰기 전에 바뀐 파일뿐 아니라 그 파일을 부르는 곳, 쓰는 타입·훅·상수를 읽어 기존 구조를 파악한다. 문장은 쉬운 말로 쓰고, 프로젝트 전용 용어나 약어는 처음 나올 때 괄호로 짧게 푼다. 섹션끼리 같은 말을 반복하지 않는다.
+
+더 읽을 것
+- CI: `gh pr checks <번호> --json name,state`. `SUCCESS`는 `pass`, `FAILURE`·`ERROR`·`CANCELLED`는 `fail`, `PENDING`·`IN_PROGRESS`·`QUEUED`는 `pending`, `SKIPPED`·`NEUTRAL`은 `skip`으로 옮긴다. 실패하면 빈 배열.
+- 리뷰 기록: `gh pr view <번호> --json reviews`. 리뷰가 있으면 마지막 리뷰의 `commit.oid` 뒤로 `git log <oid>..HEAD`와 `git diff <oid>..HEAD`를 읽어 `revisions`를 쓴다.
 
 - `title`: PR 제목 그대로.
 - `summary`: 무엇을 왜 바꿨는지 한두 문장. 리뷰어가 이것만 읽어도 PR의 목적을 안다.
-- `changes`: 바뀐 점, **최대 5개**. 파일 목록이 아니라 동작·화면 단위로 쓴다(예: "Stepper가 첫 단계에서 이전 버튼을 비활성화한다."). 대상 탭에서 확인할 수 있는 것은 그 대상 이름을 넣는다.
-- `decisions`: PR 작성자가 내린 결정, **최대 5개**. 5개가 넘으면 리뷰어가 동의 여부를 판단해야 하는 것(동작·구조·접근성)을 먼저 고른다. 코드가 하는 일을 풀어 쓴 설명은 `changes`에 두고 여기 넣지 않는다. 근거가 없으면 빈 배열.
-- `reviewPoints`: 리뷰어가 특히 봐 주길 바라는 곳, **최대 3개**. PR 본문에 적힌 질문, 엣지 케이스 프리셋이 드러내는 모양, 영향 범위가 넓은 공용 모듈 변경처럼 판단이 필요한 곳을 고른다. 확인할 수 있는 프리셋·시나리오 이름이 있으면 같이 적는다. 없으면 빈 배열.
+- `revisions`(7. 리뷰 반영): 리뷰를 받은 뒤 다시 만들 때만 쓴다. `since`는 마지막 리뷰의 커밋 SHA, `changes`는 그 뒤로 반영한 것 **최대 5개**(예: "must 코멘트대로 Stepper의 total 0 처리를 추가했다."). 리뷰가 없으면 뺀다.
+- `context`(1. 맥락): 리뷰어가 "이걸 왜 이렇게 했지?"를 추측하지 않게 한다.
+  - `problem`: 풀려는 문제와 바뀌기 전 모습, **최대 3문장**.
+  - `links`: PR 본문에 적힌 이슈·티켓 링크(`label`, `url`). 없으면 뺀다.
+  - `basics`: 이 코드베이스를 처음 보는 사람을 위한 기존 구조 설명, **최대 4문장**. 바뀐 파일이 어디에 속하고 무엇과 이어지는지(예: "문서 화면은 상단 바, 본문, 하단 바로 나뉜다.")를 쓴다. 화면에서는 접혀 있다.
+  - `decisions`: 작성자가 고른 방식, **최대 5개**. `choice`(고른 방식), `why`(이유와 제약), `rejected`(검토했다가 버린 대안과 버린 이유. 근거가 있을 때만). 5개가 넘으면 리뷰어가 동의 여부를 판단해야 하는 것(동작·구조·접근성)을 먼저 고른다. 코드가 하는 일을 풀어 쓴 설명은 `guide.changes`에 둔다.
+  - `scope`: `does`(이번 PR에서 하는 것)와 `doesNot`(일부러 하지 않은 것, 다음 PR로 미룬 것), 각 **최대 3개**. `doesNot`은 본문·커밋·TODO 주석에 근거가 있을 때만 쓴다.
+- `intuition`: 핵심 아이디어(1. 맥락에 이어 그린다).
+  - `idea`: 왜 이렇게 바꿨는지 가장 큰 이유 한 가지를 한두 문장으로. 세부 구현은 쓰지 않는다.
+  - `examples`: 작은 예시 데이터로 보여 주는 그림, **1~2개**. 값은 PR 코드의 실제 타입·필드 이름을 쓰고, 데이터는 3~5줄로 짧게 쓴다.
+    - `flow`: 데이터나 사용자 동작이 단계를 거쳐 흐를 때. 단계 2~5개, 단계마다 `label`과 그 순간의 값 `data`(예: `current: 1, total: 3`).
+    - `compare`: 전/후, 또는 입력/출력을 나란히 볼 때. `before`·`after`에 `label`과 `data`.
+- `diagrams`: 구조 그림(핵심 아이디어에 이어 그린다), **0~2개**. 시퀀스(컴포넌트·훅·서버 사이 호출 순서)나 아키텍처(모듈·컴포넌트 관계, 데이터가 오가는 경로)처럼 글만으로는 이해가 어려울 때만 쓴다. 단계가 한 줄로 이어지는 흐름은 `intuition`의 `flow`로 충분하니 넣지 않는다.
+  - **Mermaid, PlantUML 같은 다이어그램 문법·라이브러리는 절대 쓰지 않는다.** `svg`에 `<svg viewBox="0 0 W H" xmlns="http://www.w3.org/2000/svg">...</svg>`를 직접 쓴다. W는 720 이하, `width`·`height` 속성은 두지 않는다(화면 폭에 맞춰 줄어든다).
+  - 도형은 `rect`, `line`, `path`, `text`만으로 그린다. 상자는 8개 이하, 상자 라벨은 실제 컴포넌트·파일·함수 이름을 쓰고 한 줄로 짧게 쓴다. 글자는 `font-size="13"`, 상자 안 글자는 `text-anchor="middle"`로 가운데 둔다. 글자가 상자를 넘치지 않게 상자 폭을 글자 수에 맞춘다.
+  - 색은 직접 쓰지 않고 클래스를 쓴다: `rv-d-box`(상자), `rv-d-accent`(이번 PR에서 바뀌거나 새로 생긴 상자), `rv-d-line`(선·화살표), `rv-d-muted`(보조 글자). 글자는 클래스 없이 쓰면 본문 색이다. 시퀀스 그림의 생명선은 `rv-d-line`에 `stroke-dasharray="4 4"`를 준다.
+  - 화살표 머리는 그 SVG 안 `<defs><marker id="d1-arrow" ...><path class="rv-d-arrow" .../></marker></defs>`로 만들고 `marker-end="url(#d1-arrow)"`로 붙인다. id 앞에는 그림 번호(`d1-`, `d2-`)를 붙여 그림끼리 겹치지 않게 한다.
+  - `<script>`, `<foreignObject>`, `<image>`, `on*` 속성, 바깥 링크는 쓰지 않는다(화면이 지운다).
+  - `caption`: 그림이 보여 주는 것 한 문장.
+- `guide`(2. 길잡이): 어디부터 어떻게 볼지.
+  - `changes`: 변경 요약, **최대 5개**. 파일 목록이 아니라 동작·화면 단위로 쓴다(예: "Stepper가 첫 단계에서 이전 버튼을 비활성화한다."). 대상 탭에서 확인할 수 있는 것은 그 대상 이름을 넣는다.
+  - `readingOrder`: 읽는 순서, **최대 5단계**. 파일 순서가 아니라 이해하기 쉬운 순서(데이터가 흐르는 순서, 또는 바탕이 되는 것부터)로 바뀐 코드를 묶는다. 핵심을 앞에 둔다.
+    - `role`: 핵심 파일이면 `core`, 다른 변경에 따라 고친 부수 파일(타입 변경 반영, import 경로 등)이면 `side`.
+    - `title`: 이 묶음이 하는 일(예: "Stepper가 버튼 막힘을 계산한다").
+    - `files`: 설정 파일 폴더 기준 경로.
+    - `explain`: 1~3문장. 코드를 한 줄씩 옮기지 말고 역할과 이유를 쓴다.
+    - `snippet`: 설명을 받쳐 주는 핵심 줄, **15줄 이내**. diff의 최종 코드에서 그대로 옮기고 생략한 곳은 `// ...`로 둔다. 필요 없으면 뺀다.
+  - `focus`: 집중해서 봐 줬으면 하는 곳, **최대 3개**. PR 본문에 적힌 질문, 작성자가 확신이 없다고 한 곳, 엣지 케이스 프리셋이 드러내는 모양, 영향 범위가 넓은 공용 모듈 변경처럼 판단이 필요한 곳을 고른다. 확인할 수 있는 프리셋·시나리오 이름이 있으면 같이 적는다.
+  - `skim`: 대충 봐도 되는 곳, **최대 3개**. 자동 생성 코드, 이름만 바꾼 곳, 포맷팅, 락 파일처럼 diff에서 확인되는 것만 파일·폴더 이름과 함께 쓴다.
+- `evidence`(3. 증거): 동작한다는 확인.
+  - `tests`: diff에서 추가·바꾼 테스트 파일마다 `file`과 `guarantees`(그 테스트가 보장하는 동작 한 문장), **최대 5개**. 없으면 빈 배열.
+  - `manual`: 직접 확인한 방법, **최대 3개**. PR 본문에 적힌 재현 절차·테스트 환경·확인한 엣지 케이스만 옮긴다. 없으면 빈 배열.
+  - `ci`: 위 '더 읽을 것'의 CI 결과.
+  - UI 전/후 스크린샷은 따로 쓰지 않는다. 대상 탭과 `intuition`의 `compare`가 그 역할을 한다.
+- `previews`(4. 직접 만져 보기): PR 본문·코멘트에 있는 프리뷰 배포·스토리북 링크(`label`, `url`). 없으면 뺀다. 플레이그라운드 목록과 프리셋·시나리오 이름은 화면이 케이스에서 채운다.
+- `size`(5. 크기): 파일·줄 수와 커밋 목록은 빌드가 채운다. 한 PR에 관심사가 여럿이거나 리팩터링과 기능 변경이 섞였으면 그 사실과 나눠 읽는 방법을 한 문장으로 쓴다(예: "앞 두 커밋은 이름 변경뿐이라 세 번째 커밋부터 읽으면 된다."). 아니면 뺀다.
+- `risk`(6. 위험과 영향 범위): 네 칸 모두 **최대 3개**, 근거가 없으면 빈 배열.
+  - `impact`: 이 변경이 건드리는 다른 기능·모듈. 케이스의 `impacts`(find-impacts.sh 결과)를 기능 단위로 묶어 쓴다.
+  - `compatibility`: 공개 API·props 시그니처 변경, DB 마이그레이션, 설정·환경 변수 변경.
+  - `deploy`: 피처 플래그, 배포 순서, 롤백 방법.
+  - `securityPerf`: 보안·성능 고려와 측정값. 입력 처리, 권한, 렌더링 횟수, 번들 크기처럼 diff에서 보이는 것만.
+- 7번의 코멘트 우선순위(`must`/`nit`/`question`)와 자동화 안내는 화면이 고정 문구로 보여 주니 쓰지 않는다.
 
 ## 검증
 
 순서대로 돌리고, 하나라도 실패하면 오류를 읽고 **PR 폴더 파일만** 고친 뒤 1번부터 다시 한다. 세 번 실패하면 멈추고 마지막 오류와 시도한 수정을 보고한다.
 
 1. `npx tsc --noEmit` — PR 폴더 파일의 오류가 없어야 한다. 케이스와 무관한 기존 오류는 무시하고 보고에만 적는다. tsconfig `include`가 `review/`를 덮지 않아(`./**/*.tsx` 같은 넓은 glob은 덮는다) 케이스가 검사되지 않으면 그 사실을 보고에 적는다.
-2. `node ${CLAUDE_SKILL_DIR}/src/cli.ts build <PR번호>` — PR 폴더 하나를 빌드한다. 결과는 `outDir`의 `review-<PR번호>.html` 하나다. 빌드가 성공하면 경고는 고치지 않고, PR 폴더 파일을 가리키는 경고만 보고에 적는다.
-3. `node ${CLAUDE_SKILL_DIR}/scripts/smoke.mjs <결과 HTML>` — 첫 화면(개요)을 확인하고, 대상 탭마다 프리셋·시나리오를 하나씩 눌러 렌더링 오류·콘솔 오류·외부 요청을 확인한 뒤 탭마다 누른 개수를 출력한다. 개수가 각 케이스의 프리셋·시나리오 수와 같은지 본다. "경고 목 없는 요청"이 나오면 그 요청을 시나리오에 넣는다. playwright가 없다고 나오면 건너뛰고 보고에 적는다.
+2. 글쓰기 규칙 — `pr.ts`와 케이스 파일의 글을 `writing-rules.md`의 금지 표현 목록, 피할 쓰기 방식과 한 문장씩 대조한다. 걸리는 문장은 뜻을 바꾸지 않고 고쳐 쓴다.
+3. `node ${CLAUDE_SKILL_DIR}/src/cli.ts build <PR번호>` — PR 폴더 하나를 빌드한다. 결과는 `outDir`의 `review-<PR번호>.html` 하나다. 빌드가 성공하면 경고는 고치지 않고, PR 폴더 파일을 가리키는 경고만 보고에 적는다.
+4. `node ${CLAUDE_SKILL_DIR}/scripts/smoke.mjs <결과 HTML>` — 첫 화면(개요)을 확인하고, 대상 탭마다 프리셋·시나리오를 하나씩 눌러 렌더링 오류·콘솔 오류·외부 요청을 확인한 뒤 탭마다 누른 개수를 출력한다. 개수가 각 케이스의 프리셋·시나리오 수와 같은지 본다. "경고 목 없는 요청"이 나오면 그 요청을 시나리오에 넣는다. playwright가 없다고 나오면 건너뛰고 보고에 적는다.
 
 ## 끝나면
 
@@ -124,4 +184,4 @@ PR 하나에 PR 폴더 `review/cases/<PR번호>/` 하나를 만들고, 빌드하
 - 개요의 `summary` 한 줄
 - 대상 탭별 프리셋·시나리오 이름 목록, 넣지 못한 엣지 케이스와 이유
 - 확인할 수 없는 동작(미디어 쿼리, `confirm`, 기록되지 않는 클릭 등)
-- 사용자가 원하면 결과 HTML을 Artifact 도구로 게시한다. 게시 직후에는 비공개이므로 리뷰어가 열려면 아티팩트 페이지의 Share 메뉴에서 공유해야 한다고 알린다.
+- **[묻기]** 결과 HTML을 아티팩트로 게시할지 묻는다. 선택지: `게시 (추천)`, `게시 안 함`. 16MB를 넘으면 묻지 않는다. 게시하면 Artifact 도구로 올리고, 게시 직후에는 비공개이므로 리뷰어가 열려면 아티팩트 페이지의 Share 메뉴에서 공유해야 한다고 알린다.

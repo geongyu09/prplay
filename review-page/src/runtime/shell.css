@@ -65,18 +65,335 @@
 .rv-overview {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-width: 760px;
+  gap: 16px;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .rv-summary {
   margin: 0;
-  font-size: 15px;
+  font-size: 18px;
   line-height: 1.6;
+}
+
+.rv-overview .rv-section {
+  padding: 16px 20px;
+}
+
+.rv-overview .rv-section h2 {
+  margin-bottom: 10px;
+  font-size: 17px;
+}
+
+.rv-overview .rv-note,
+.rv-overview .rv-empty,
+.rv-overview .rv-basics summary,
+.rv-overview .rv-figure figcaption,
+.rv-overview .rv-flow-label,
+.rv-overview .rv-side-label {
+  font-size: 14px;
+}
+
+.rv-overview .rv-flow-data,
+.rv-overview .rv-side-data,
+.rv-overview .rv-pre {
+  font-size: 13px;
 }
 
 .rv-overview .rv-list li + li {
   margin-top: 4px;
+}
+
+/* 배경·핵심 아이디어·코드 흐름 */
+.rv-prose p,
+.rv-idea,
+.rv-walk p {
+  margin: 0 0 6px;
+  line-height: 1.6;
+}
+
+.rv-basics {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--rv-bg);
+}
+
+.rv-basics summary {
+  cursor: pointer;
+  color: var(--rv-muted);
+  font-size: 12px;
+}
+
+.rv-basics .rv-prose {
+  margin-top: 6px;
+}
+
+.rv-idea {
+  font-weight: 600;
+}
+
+.rv-figure {
+  margin: 10px 0 0;
+}
+
+.rv-figure figcaption {
+  margin-top: 6px;
+  color: var(--rv-muted);
+  font-size: 12px;
+}
+
+.rv-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rv-flow-step {
+  position: relative;
+  display: flex;
+  flex: 1 1 120px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--rv-line);
+  border-radius: 6px;
+  background: var(--rv-bg);
+}
+
+/* 다음 상자로 가는 화살표 */
+.rv-flow-step + .rv-flow-step::before {
+  content: "→";
+  position: absolute;
+  top: 50%;
+  left: -19px;
+  transform: translateY(-50%);
+  color: var(--rv-muted);
+}
+
+.rv-flow-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rv-flow-data,
+.rv-side-data {
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rv-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.rv-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--rv-line);
+  border-radius: 6px;
+}
+
+.rv-side-before {
+  background: #fff5f5;
+}
+
+.rv-side-after {
+  background: #f0fff4;
+}
+
+.rv-side-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rv-side-data {
+  margin: 0;
+}
+
+/* 구조 그림 (plan.md 3.4). SVG 안 rv-d-* 클래스가 화면 색을 따른다 */
+.rv-diagram svg {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  color: var(--rv-fg);
+  font-family: inherit;
+}
+
+.rv-diagram text {
+  fill: currentColor;
+}
+
+.rv-diagram .rv-d-box {
+  fill: var(--rv-bg);
+  stroke: var(--rv-line);
+}
+
+.rv-diagram .rv-d-accent {
+  fill: #ddf4ff;
+  stroke: var(--rv-accent);
+}
+
+.rv-diagram .rv-d-line {
+  fill: none;
+  stroke: var(--rv-muted);
+}
+
+.rv-diagram .rv-d-arrow {
+  fill: var(--rv-muted);
+  stroke: none;
+}
+
+.rv-diagram text.rv-d-muted {
+  fill: var(--rv-muted);
+}
+
+.rv-walk {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.rv-walk-file {
+  display: block;
+  margin: 2px 0 4px;
+  overflow-wrap: anywhere;
+}
+
+/* 개요 7가지 섹션의 소제목·두 칸·표시 (plan.md 3.4) */
+.rv-sub {
+  margin-top: 14px;
+}
+
+.rv-overview h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.rv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.rv-cell {
+  padding: 10px 12px;
+  border: 1px solid var(--rv-line);
+  border-radius: 6px;
+}
+
+.rv-cell .rv-list {
+  padding-left: 18px;
+}
+
+.rv-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 6px 0 0;
+}
+
+.rv-decisions li > span {
+  display: block;
+}
+
+.rv-badge {
+  margin-right: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--rv-line);
+  border-radius: 10px;
+  color: var(--rv-muted);
+  font-size: 12px;
+}
+
+.rv-badge-core {
+  border-color: var(--rv-accent);
+  color: var(--rv-accent);
+}
+
+.rv-ci,
+.rv-commits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rv-ci-state {
+  display: inline-block;
+  min-width: 56px;
+  margin-right: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rv-ci-pass,
+.rv-add {
+  color: #1a7f37;
+}
+
+.rv-ci-fail,
+.rv-del,
+.rv-warn {
+  color: var(--rv-danger);
+}
+
+.rv-ci-pending,
+.rv-ci-skip {
+  color: var(--rv-muted);
+}
+
+.rv-states {
+  flex-basis: 100%;
+}
+
+.rv-revisions {
+  border-color: var(--rv-accent);
+}
+
+.rv-revisions .rv-sub:first-of-type {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .rv-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rv-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .rv-flow {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .rv-flow-step {
+    flex: none;
+  }
+
+  .rv-flow-step + .rv-flow-step::before {
+    content: "↓";
+    top: -17px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 
 .rv-cases {

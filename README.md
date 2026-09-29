@@ -3,7 +3,7 @@
 PR 설명과, PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 있는 플레이그라운드를 담은 **HTML 파일 하나**를 PR마다 만들고, Claude 아티팩트로 공유하는 도구다. 설계와 결정 근거는 [`plan.md`](plan.md)에 있다.
 
 결과 화면 (PR 하나에 HTML 하나. 맨 위 탭 `[개요] [대상 1] [대상 2] ...`)
-- 개요 탭: AI가 정리한 PR 요약, 바뀐 점, 결정 목록(최대 5개), 리뷰 포인트, 플레이그라운드 목록
+- 개요 탭: AI가 정리한 PR 설명. 좋은 리뷰에 필요한 7가지 순서다: 맥락(왜), 길잡이(어디부터), 증거(테스트·CI), 직접 만져 보기, 크기(줄 수·커밋), 위험과 영향 범위, 리뷰 방법(must/nit/question)
 - 대상 탭: 리뷰 대상(컴포넌트·페이지)마다 아래 플레이그라운드
 - 미리보기: 실제 컴포넌트·페이지가 렌더링된다. 폭 슬라이더, 페이지는 주소 표시줄
 - props 편집: 타입에서 자동으로 만든 컨트롤, 엣지 케이스 프리셋, 함수 props 호출 기록
@@ -98,9 +98,20 @@ import { definePr } from "review-kit";
 export default definePr({
   title: "[FE] 문서 경로·문서 넘기기 컨트롤 구현",
   summary: "문서 화면 상단의 경로 Breadcrumb과 문서 넘기기 Stepper를 공용 컴포넌트로 추가한다.",
-  changes: ["Breadcrumb의 지금 항목은 자리가 모자라면 한 줄에서 말줄임된다."], // 최대 5개
-  decisions: ["Breadcrumb은 표시 전용이라 링크·hover가 없고 nav 대신 div를 쓴다."], // 최대 5개
-  reviewPoints: ["Breadcrumb '아주 긴 제목' 프리셋에서 말줄임 위치를 봐 주세요."], // 최대 3개
+  context: {                                        // 1. 맥락
+    problem: ["문서 위치를 보여 줄 방법이 없었다."],
+    decisions: [{ choice: "Breadcrumb은 링크 없이 div로 그린다.", why: "표시 전용이다." }],
+    scope: { does: ["Breadcrumb을 추가한다."], doesNot: [] },
+  },
+  guide: {                                          // 2. 길잡이
+    changes: ["Breadcrumb의 지금 항목은 자리가 모자라면 말줄임된다."],
+    readingOrder: [],
+    focus: ["'아주 긴 제목' 프리셋에서 말줄임 위치를 봐 주세요."],
+    skim: [],
+  },
+  evidence: { tests: [], manual: [], ci: [] },      // 3. 증거
+  risk: { impact: [], compatibility: [], deploy: [], securityPerf: [] }, // 6. 위험
+  // 4. 플레이그라운드 목록과 5. 줄 수·커밋은 빌드가 채운다
 });
 ```
 

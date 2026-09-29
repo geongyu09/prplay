@@ -149,5 +149,30 @@
 
 **완료 기준**
 - `build 366`이 HTML 하나를 만들고, 개요·Stepper·Breadcrumb 탭이 있다.
-- 개요 탭에 요약, 바뀐 점, 결정, 리뷰 포인트, 플레이그라운드 목록이 보인다.
+- 개요 탭에 요약과 7가지 섹션(맥락, 길잡이, 증거, 직접 만져 보기, 크기, 위험과 영향 범위, 리뷰 방법)이 보인다(§3.4).
 - 케이스 파일에 `decisions`가 없고, 스모크가 모든 대상 탭을 통과한다.
+
+---
+
+## 8단계. 플러그인 출시
+
+**목표**: 스킬 폴더를 Claude Code 플러그인 `prplay`로 묶고 prplay 저장소를 마켓플레이스로 만들어, 사용자가 `/plugin install prplay@prplay` 후 `/prplay:review-page`로 쓰게 한다. 자체 마켓플레이스로 공개한 뒤 Anthropic 디렉터리에 제출한다(2026-09-29 사용자 결정). 스킬 폴더 복사 방식은 없앤다.
+
+| 번호 | 작업 | 참고 |
+| --- | --- | --- |
+| 8.1 | 확인 스파이크: 빈 플러그인으로 Bash 도구 환경의 `CLAUDE_PLUGIN_DATA`, SKILL.md 본문 `${CLAUDE_SKILL_DIR}`·`${CLAUDE_PLUGIN_DATA}` 치환, 캐시 경로에서 `allowed-tools` 패턴 일치, 심볼릭 링크 `node_modules`에서 Node·Vite 패키지 탐색을 확인하고 plan.md 14장에 적는다 | §11.3, §14 |
+| 8.2 | 저장소 구성: `review-page/`를 `plugins/prplay/skills/review-page/`로 옮기고, `plugins/prplay/.claude-plugin/plugin.json`, 루트 `.claude-plugin/marketplace.json`, LICENSE를 만든다. 루트 tsconfig·`typecheck` 경로를 새 위치로 바꾼다. `claude plugin validate`가 통과한다 | §11.1 |
+| 8.3 | 의존성 설치 위치: `cli.ts`가 `--data <경로>`(SKILL.md에서 `${CLAUDE_PLUGIN_DATA}` 치환)에 `npm ci`하고 스킬 폴더 `node_modules`를 링크로 건다. 옵션도 환경 변수도 없으면 스킬 폴더에 설치 | §11.3 |
+| 8.4 | `review-kit` 타입: `cli.ts`가 `review/review-kit.d.ts`(react 타입만 참조)를 쓰고, `init` 안내와 템플릿·예시 주석을 새 tsconfig `paths`와 `/prplay:review-page` 이름으로 바꾼다. `.gitignore` 안내에서 스킬 `node_modules` 줄을 뺀다 | §11.1, §11.2 |
+| 8.5 | SKILL.md: 호출 이름, 설치 위치 안내, 8.1 결과에 따른 명령 형식, `allowed-tools` | §9.2, §11.3 |
+| 8.6 | Knot 적용: 로컬 마켓플레이스로 설치한 플러그인으로 Knot 복사본의 4케이스·#366 빌드·스모크·`tsc`, dev 서버, 빈 Vite + React 프로젝트의 처음 설정을 확인한다. 버전을 올려 업데이트했을 때 lockfile이 같으면 다시 설치하지 않는지도 본다. 로컬 폴더 마켓플레이스는 원본에서 실행되므로 캐시·업데이트 확인은 `file://` git 소스로 설치해서 한다 | §11.4 |
+| 8.7 | README(루트와 플러그인): 설치 명령, 요구 사항, 처음 설정, 사용법, 아티팩트 게시, 1장 제약 요약. 복사 안내는 지운다 | §11.5 |
+| 8.8 | 출시: GitHub 공개 저장소에 푸시해 `/plugin marketplace add <owner>/prplay`로 설치되는지 확인하고, 디렉터리 요구 사항을 확인해 claude.ai/directory/manage에 제출한다(제출은 사용자가 한다) | §11.5 |
+
+**완료 기준**
+- `claude plugin validate`가 저장소 루트와 `plugins/prplay/`에서 통과한다.
+- 로컬 마켓플레이스로 설치한 플러그인만으로 Knot 복사본의 기존 케이스가 빌드되고 스모크·`tsc`를 통과하며, 결과 HTML이 8단계 전과 같다.
+- 빈 Vite + React 프로젝트에서 `/prplay:review-page` 처음 설정 후 예시 케이스가 빌드되고, 대상 `package.json`은 바뀌지 않는다. `tsc`는 커밋된 `review/review-kit.d.ts`만으로 통과한다.
+- 플러그인 버전을 올려 업데이트해도 lockfile이 같으면 `npm ci`를 다시 돌리지 않는다.
+- GitHub 저장소에서 마켓플레이스 추가·설치가 되고, 디렉터리 제출을 마쳤다.
+
