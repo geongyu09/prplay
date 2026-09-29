@@ -38,25 +38,25 @@
 ## 4단계. 코드 패널
 - [x] 4.1 sourcesModule (소스, diff, SHA 링크)
 - [x] 4.2 탭 UI
-- [ ] 4.3 문법 강조 선택과 크기 비교
-- [ ] 4.4 GitHub 링크 열기 또는 복사
-- [ ] 4.5 decisions, impacts와 영향 범위 스크립트
+- [x] 4.3 문법 강조 선택과 크기 비교
+- [x] 4.4 GitHub 링크 열기 또는 복사
+- [x] 4.5 decisions, impacts와 영향 범위 스크립트
 
 ## 5단계. 스킬
-- [ ] 5.1 review-page SKILL.md
-- [ ] 5.2 example-case 두 개
-- [ ] 5.3 엣지 케이스·시나리오 규칙
-- [ ] 5.4 검증 단계
-- [ ] 5.5 (선택) Playwright 스모크 테스트
-- [ ] 5.6 다른 PR 두세 개로 다듬기
+- [x] 5.1 review-page SKILL.md
+- [x] 5.2 example-case 두 개
+- [x] 5.3 엣지 케이스·시나리오 규칙
+- [x] 5.4 검증 단계
+- [x] 5.5 (선택) Playwright 스모크 테스트
+- [x] 5.6 다른 PR 두세 개로 다듬기
 
 ## 6단계. 라이브러리 분리
 - [x] 6.1 패키지 구조
 - [x] 6.2 defineConfig와 review.config.ts
-- [ ] 6.3 CLI (build, init)
-- [ ] 6.4 peerDependencies와 ESM 배포
+- [x] 6.3 CLI (build, init)
+- [x] 6.4 peerDependencies와 ESM 배포
 - [x] 6.5 Knot 적용 방법 정리
-- [ ] 6.6 README
+- [x] 6.6 README
 
 ## 확인 항목 (plan.md 14장)
 - [x] 아티팩트 파일 크기 상한 → 16MB(data: URI 포함), 12.6MB 게시 성공
@@ -71,9 +71,12 @@
 
 ## 단계 완료
 - 2단계 2026-09-27 (완료 기준 4개 file://에서 확인, 아티팩트 게시는 아직)
+- 3단계 2026-09-29 (사용자가 아티팩트에서 워크스페이스 홈 네 시나리오 전환 확인)
+- 4단계 2026-09-29 (4케이스 소스·diff 표시, SHA 링크, 강조 후 크기 기록. Playwright file:// 확인)
+- 5단계 2026-09-29 (처음 보는 PR 3개에서 스킬 한 번으로 빌드·스모크 통과, src 변경 없음, decisions 5개 이하. 에이전트가 사람 대신 돌렸고, 생성된 케이스를 사람이 검토해 규칙에 반영하는 일은 남음)
+- 6단계 2026-09-29 (src에 Knot 전용 내용 없음, 기존 4케이스 스모크 통과, 빈 Vite+React에서 pack 설치→init→예시 빌드 1005KB)
 
 ## 막힌 점
-- 3단계 완료 기준 '아티팩트에서도 모킹 동작'은 사용자 확인 필요: https://claude.ai/artifact/E37LfUYuyNtpjLa5yAoYN9 (네 시나리오 전환, body 편집 후 적용).
 
 ## 작업 기록
 - 2026-09-27 1.1 Knot 구조 조사: Emotion·Vite 8(oxc)·axios·TanStack Query·react-router 8 확인, plan.md 2.2/2.3 갱신. #365는 이슈이고 PR은 #366(미머지)
@@ -101,3 +104,13 @@
 - 2026-09-27 주소 표시줄(사용자 요청, plan.md 4.1): wrapper에 address(report·connect)를 넘기고 Knot Wrapper의 AddressSync가 useLocation·useNavigate로 연결. 입력+Enter 이동, ↺ initialPath, 다시 마운트 시 보던 주소 유지. workspace-home dev에서 확인, tsc 통과
 - 2026-09-27 단일 컴포넌트 케이스 targets/knot/review/cases/button.tsx(Button: select size·variant, boolean 3개, label은 children을 render에서 채움, 프리셋 6개) 추가, worktree에 복사. `review:build button` 3.7MB, Knot tsc 통과. 브라우저 확인은 남음(Chrome 확장 연결 안 됨). 상속 props(onClick)는 docgen이 못 풀어 호출 기록에 안 남음
 - 2026-09-27 4.1~4.2 sourcesModule(virtual:review-sources: 파일 내용, git diff baseBranch...HEAD, SHA 링크에 show-prefix 붙임)과 미리보기 아래 CodePanel(소스·diff·결정·영향 범위 탭, 링크+복사 버튼). 결정 목록을 오른쪽 패널에서 탭으로 옮김. plan.md 3.3·8장에 구현 규칙 추가. 365·button 빌드 3.7MB, SHA 링크(frontend/ 포함)와 365 diff 주입 확인. 문법 강조는 4.3, 브라우저 화면 확인은 사용자 확인 필요
+- 2026-09-29 4.3 prism-react-renderer 2.4.1 선택: 365 기준 강조 없음 3705KB → Prism 3789KB(+84) / Shiki 4.4.3 JS 엔진 4046KB(+341). Highlight.tsx(확장자별 언어, 줄 번호). plan.md 8장 기록
+- 2026-09-29 4.4 파일 하나면 경로 자체가 SHA 링크, 여럿이면 "GitHub에서 보기". 링크 복사 실패 시 입력칸에 선택. plan.md 8장
+- 2026-09-29 4.5 templates/review-page/scripts/find-impacts.sh(rg, 모듈 이름 기준). Button impacts 13개 채움. 버그 수정: sources 경로에 `]`(`[workspaceId]`)가 있으면 readSources가 비던 문제 → 문자열 리터럴 단위로 읽음. 4케이스 코드 패널 Playwright(file://) 확인
+- 2026-09-29 5.1~5.4 templates/review-page/SKILL.md(PR 정보 !명령, 케이스 이름 규칙, props·Harness·프리셋 엣지 표·시나리오·decisions 규칙, tsc→build→smoke 3회 규칙), example-component.tsx(Button+Stepper Harness), example-page.tsx(워크스페이스 홈). plan.md 9.2에 구현 차이 기록
+- 2026-09-29 5.5 scripts/smoke.mjs: 프로젝트 playwright 사용(없으면 건너뜀, 브라우저 없으면 설치된 Chrome). 첫 화면·프리셋·시나리오마다 렌더링 오류·pageerror·콘솔 error·외부 요청 실패, 501은 경고. 4케이스 통과, 일부러 깨뜨린 케이스는 실패로 잡음. plan.md 9.4
+- 2026-09-29 6.3 review-kit init(설정·스킬·예시 케이스 생성, 있으면 건너뜀, --force). 6.4 tsconfig.build.json → dist/, publishConfig로 배포 시 bin·exports를 dist로, files 지정. pnpm pack tgz를 빈 Vite+React(react-ts 템플릿, msw 3.0.0) 프로젝트에 설치 → init → build example 3685KB → smoke 통과. plan.md 11.1·11.3
+- 2026-09-29 빌드 크기 경고(14MB 경고, 16MB 초과 알림, plan.md 1.1). 6.6 README.md
+- 2026-09-29 폰트 분리(사용자 결정): review.config.ts `styles` → virtual:review-styles, review-kit에서 pretendard·fonts.css 제거, targets/knot/review/fonts.css + PR #366 worktree devDependency pretendard 1.3.9. Knot 결과 크기 그대로(3.8MB), 빈 프로젝트 예시 3685KB → 1005KB. plan.md 2.3·11.2·11.4·13장
+- 2026-09-29 5.6 scratchpad Knot 클론의 #362·#368·#346에서 에이전트가 SKILL.md만 보고 실행: 모두 첫 시도에 tsc·build·smoke 통과(케이스 4개). 보고된 모호한 점을 SKILL.md 규칙에 반영(plan.md 9.2). 도구 수정: 핸들러 IMPORT_IS_UNDEFINED 경고 제거(Reflect.get), "use client" 경고 숨김, 스모크가 누른 프리셋·시나리오 수 출력
+- 2026-09-29 3단계 막힌 점 해소: 사용자가 아티팩트(E37LfUYuyNtpjLa5yAoYN9)에서 시나리오 전환 시 화면이 바뀌는 것을 확인

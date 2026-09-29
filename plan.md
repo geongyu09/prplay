@@ -51,7 +51,7 @@ PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 
 | 항목 | 결과 | 근거 | 설계에 주는 영향 |
 | --- | --- | --- | --- |
 | Claude Code에서 바로 게시 | 가능. Artifact 도구에 HTML 경로를 넘기면 `claude.ai/artifact/...` 링크가 나오고, 같은 경로로 다시 올리면 같은 링크가 갱신된다 | 게시 | 스킬 마지막 단계에서 수동 업로드 없이 게시할 수 있다(5단계) |
-| 파일 크기 상한 | 페이지 16MB. `data:` URI도 포함해서 센다. 12.6MB 파일 게시는 성공 | 게시 + 규칙 | 폰트는 쓰는 weight·글자만 넣고, 빌드 스크립트에서 크기를 출력해 16MB에 가까우면 경고한다 |
+| 파일 크기 상한 | 페이지 16MB. `data:` URI도 포함해서 센다. 12.6MB 파일 게시는 성공 | 게시 + 규칙 | 폰트는 쓰는 weight·글자만 넣고, 빌드 스크립트에서 크기를 출력해 16MB에 가까우면 경고한다(14MB 넘으면 경고, 16MB 넘으면 "아티팩트에 올릴 수 없음"을 알린다. 빌드는 실패시키지 않는다) |
 | 외부 이미지·CSS | 막힌다. 외부 스크립트는 cdnjs, jsdelivr 등 일부 CDN만, 외부 CSS는 Google Fonts만 허용되고 그 외 요청은 오류 없이 막힌다 | 규칙 | 지금 설계대로 폰트·이미지·SVG를 모두 파일 안에 넣는다. 원격 이미지 URL이 들어간 목 데이터는 화면에서 깨진다 |
 | `data:`·`blob:` 자원 | 허용 | 규칙 | vite-plugin-singlefile의 base64 인라인 방식이 동작한다 |
 | 부모 URL hash 전달 | 영문·숫자·`.` `_` `~` `-`로만 된 `#anchor`만 전달된다. `#key=value`와 쿼리 문자열은 전달되지 않는다 | 규칙 | 편집 상태를 URL로 공유할 수 없다. 7장의 JSON 복사/붙여넣기가 유일한 공유 방법이다. `#code`처럼 탭을 고르는 용도로만 쓸 수 있다 |
@@ -132,7 +132,7 @@ Knot는 webpack과 svgr을 쓰므로 Vite 빌드에서 같은 결과가 나오�
 2. svgr 옵션을 webpack 설정과 맞춘다. Knot는 SVG의 `width`, `height`를 지우고 `size` prop으로 채우며 `aria-hidden="true"`를 붙이므로, 같은 svgr 옵션(svgo 플러그인, `svgProps`, `template` 등)을 Vite 쪽에도 넣는다.
 3. `process.env.*`를 쓰는 코드가 있으면 Vite의 `define`으로 채운다.
 4. CSS-in-JS의 JSX 설정(Knot는 Emotion의 `jsxImportSource: '@emotion/react'`)을 Vite의 `oxc.jsx.importSource`에 맞춘다.
-5. `index.html`에서 CDN으로 불러오는 폰트는 아티팩트에서 막힐 수 있으므로, npm 패키지의 폰트 파일을 `import`해서 인라인한다.
+5. `index.html`에서 CDN으로 불러오는 폰트는 아티팩트에서 막힐 수 있으므로, npm 패키지의 폰트 파일을 `import`해서 인라인한다. 폰트 CSS는 프로젝트 쪽 파일로 두고 `review.config.ts`의 `styles`로 넣는다(11.2). review-kit은 폰트를 넣지 않는다.
 
 Knot에서 확인한 값 (2026-09-27, `frontend/` develop 기준)
 
@@ -148,7 +148,7 @@ Knot에서 확인한 값 (2026-09-27, `frontend/` develop 기준)
 | 서버 상태 | TanStack Query v5 | 4.2대로 시나리오마다 `new QueryClient()` |
 | 라우터 | react-router 8 `createBrowserRouter` | 미리보기는 `MemoryRouter` |
 | 전역 Provider | `ThemeProvider`(Emotion) + `GlobalStyle` + `QueryClientProvider` (`@provider/themeProvider`, `@provider/queryClient`) | 4.1 wrapper와 같다 |
-| 폰트 | `index.html`의 jsDelivr CDN `<link>`로 Pretendard Variable | 5번대로 인라인 필요 |
+| 폰트 | `index.html`의 jsDelivr CDN `<link>`로 Pretendard Variable | 5번대로 인라인 필요. `review/fonts.css`(`pretendard` 패키지의 woff2 `@font-face`)를 `styles`로 넣고, `pretendard`는 Knot devDependency로 둔다(11.4) |
 | MSW | msw 2.15, 핸들러는 `@api/mock/handlers` | 6.1 `getResponse`로 재사용 |
 
 그 밖에
@@ -487,6 +487,15 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
 4. 마지막에 결과 HTML 경로를 알려준다.
 ````
 
+구현(5.1~5.4, 2026-09-29): 실제 스킬은 `templates/review-page/SKILL.md`이고 위 초안에서 아래가 바뀌었다.
+- 케이스 파일: 리뷰할 대상이 하나면 `review/cases/<PR번호>.tsx`, 여럿이면 대상마다 `review/cases/<PR번호>-<이름>.tsx`(최대 3개, `<이름>`은 컴포넌트 이름의 kebab-case). 파일 이름 앞 숫자가 저장 키의 PR번호가 된다(7장).
+- `gh pr diff --name-only`는 git 루트 기준 경로라 `git rev-parse --show-prefix`를 떼고 `sources`에 넣는다.
+- 예시는 `example-component.tsx`(컴포넌트)와 `example-page.tsx`(페이지+네트워크) 두 개다.
+- 엣지 케이스 프리셋 목록과 시나리오 규칙을 스킬 본문에 고정한다(5.2, 6장).
+- 검증은 `npx tsc --noEmit` → `npx review-kit build` → `scripts/smoke.mjs`(9.4) 순서다. 실패하면 케이스 파일만 고쳐 처음부터 다시 돌리고, 3번 실패하면 멈추고 오류를 보고한다. 케이스 파일 밖(`src/`, `review.config.ts`, wrapper)을 고쳐야 할 것 같으면 고치지 않고 사용자에게 묻는다.
+- 마지막에 결과 HTML 경로와 크기를 알리고, 사용자가 원하면 Artifact 도구로 게시한다(1.1). 게시 후 Share 메뉴로 공유해야 리뷰어가 열 수 있다고 알린다.
+- 5.6 시험(2026-09-29): Knot #362(Chip + 유틸), #368(컴포넌트 두 개, props 없는 애니메이션), #346(네트워크 위젯)을 scratchpad 클론에서 스킬 본문만 주고 돌렸다. 셋 다 tsc·빌드·스모크를 첫 시도에 통과했다. 헷갈렸다고 보고된 점을 스킬에 반영했다: 대상 고르기(바뀐 가장 작은 단위, 컴포넌트+유틸, 품는 대상), 케이스 전용 props의 컨트롤 종류와 ReactNode 대체 prop 이름, props 없는 대상, `actions` 범위, 숫자 경계값·비유한 값, 프리셋 12개 상한, 시나리오 4개는 최소이고 조작 뒤 요청·이어지는 id·전역 캐시, 에러 body, PR 본문 읽기(`--json body,commits`)와 본문·diff 불일치 시 diff 우선, `find-impacts.sh`에 넘길 파일과 테스트·목 제외, 빌드 경고 처리, 확인할 수 없는 동작 보고.
+
 ### 9.3 영향 범위 찾기
 
 - 바뀐 파일을 import하는 곳은 `rg "from ['\"].*Breadcrumb['\"]" src` 같은 검색으로 찾는다.
@@ -500,6 +509,7 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
   - 실패: "미리보기 렌더링 오류" 문구, 페이지의 잡히지 않은 오류(`pageerror`), 콘솔 `error`, `file:`·`data:`·`blob:`이 아닌 외부 요청
   - 경고: 요청 기록의 501(목이 없는 요청)
   - 실패가 하나라도 있으면 1로 끝난다.
+  - 파일마다 누른 프리셋·시나리오 개수를 출력한다(5.6: 통과 한 줄만으로는 실제로 눌렀는지 알 수 없었다).
 
 ---
 
@@ -535,13 +545,19 @@ review-kit/
       example-component.tsx  # 컴포넌트 케이스 예시
       example-page.tsx       # 페이지 + 네트워크 케이스 예시
       scripts/find-impacts.sh
+      scripts/smoke.mjs
+    example/                 # init이 review/로 복사하는 예시 컴포넌트와 케이스
+      Example.tsx
+      cases/example.tsx
   package.json   # bin: { "review-kit": "dist/cli.js" }
 ```
 
 CLI (명령은 설정 파일이 있는 프로젝트 폴더에서 실행한다)
 - `review-kit build <케이스>... [--pr 번호]`: 케이스마다 단일 HTML을 `outDir`에 만든다. 아티팩트에 올리는 결과물이다.
+  - 번들러의 `MODULE_LEVEL_DIRECTIVE`(`"use client"`) 경고는 단일 HTML에서 의미가 없으므로 숨긴다. 기존 MSW 핸들러 파일은 default와 `handlers` 중 있는 것을 쓰되, 없는 export를 정적으로 참조해 경고가 나지 않게 한다(5.6에서 스킬이 설정 문제로 오해했다).
 - `review-kit dev <케이스> [--port 5173]`: 같은 설정으로 Vite dev 서버를 띄운다. 케이스 파일이나 컴포넌트를 고치면 바로 반영(HMR)되므로 케이스를 쓰는 동안 확인용으로 쓴다. 단일 파일 플러그인은 빼고, 나머지 플러그인·가상 모듈·alias는 build와 같다. 최종 확인은 build 결과를 `file://`로 연다(10장).
 - `review-kit init`: `review.config.ts`와 스킬 템플릿을 복사한다.
+  - 구현(6.3): 현재 폴더에 `review.config.ts`(`templates/review.config.ts`, `git remote get-url origin`이 GitHub면 `repoUrl`을 채움), `.claude/skills/review-page/`(`templates/review-page/` 전체), 바로 빌드해 볼 수 있는 `review/cases/example.tsx`와 그 대상 `review/Example.tsx`(`templates/example/`)를 만든다. 이미 있는 파일은 건너뛰고 알린다(`--force`면 덮어쓴다). `package.json`·`.gitignore`·`tsconfig`는 고치지 않고, 넣을 스크립트, `review/dist/` 무시 줄, tsconfig `include`에 `review`와 `review.config.ts`를 넣으라는 안내(스킬 검증의 `tsc`가 케이스를 검사하도록)를 출력한다. `msw`·`react`·`react-dom`이 설치돼 있지 않으면 설치하라고 알린다.
 
 ### 11.2 프로젝트 설정 파일
 
@@ -556,6 +572,7 @@ export default defineConfig({
   jsxImportSource: '@emotion/react',       // 기본값 'react'
   define: { 'process.env.API_BASE_URL': '""' },
   sharedPackages: ['@emotion/react'],      // 대상 node_modules에서 가져올 패키지. react, react-dom, msw는 항상 포함
+  styles: ['./review/fonts.css'],          // 미리보기에 넣을 CSS 파일(폰트 @font-face 등). 번들에 인라인된다
   wrapper: './review/Wrapper.tsx',         // 4.1 Provider 묶음 컴포넌트 파일
   mockHandlers: './src/shared/api/mock/handlers', // 6.1 기존 MSW 핸들러 파일. 시나리오에 없는 요청에 쓴다
   casesDir: './review/cases',              // 케이스 이름만 줄 때 찾는 폴더
@@ -567,6 +584,7 @@ export default defineConfig({
 
 - 설정 파일은 Node에서 읽고(Vite `loadConfigFromFile`로 TS 변환), 미리보기는 브라우저 번들에서 돈다. 그래서 `wrapper`는 함수가 아니라 컴포넌트 파일 경로로 받아 `virtual:review-wrapper`로 주입한다. 파일은 `({ initialPath, address, children }: WrapperProps) => ReactNode` 컴포넌트를 default export한다. `address`는 4.1 주소 표시줄 연결용이다. `review-kit`이 key로 다시 마운트하므로 `QueryClient`는 wrapper 안에서 `useState`로 만들면 된다(4.2).
 - `sources`, `impacts` 경로는 설정 파일이 있는 폴더 기준이다.
+- `styles`는 `virtual:review-styles`에서 순서대로 import한다. 리뷰 화면(Shadow DOM)은 시스템 글꼴을 쓰므로 여기 넣은 CSS는 미리보기 쪽 문서에만 적용된다. `url()`의 패키지 경로는 그 CSS 파일 위치(프로젝트 `node_modules`)에서 찾는다.
 
 ### 11.3 주의할 점
 
@@ -576,6 +594,10 @@ export default defineConfig({
 - 처음에는 Vite 빌드만 지원하고, webpack 프로젝트는 설정 파일의 `plugins`와 `svgr` 옵션으로 맞추게 한다.
 - prplay는 `pnpm-workspace.yaml`에 `autoInstallPeers: false`를 두어 피어를 설치하지 않는다. 타입만 필요한 `@types/react`는 대상과 같은 버전을 devDependency로 둔다(링크한 `src/index.ts`를 대상 `tsc`가 검사하기 때문).
 - 배포 전(로컬 링크 단계)에는 `src/`의 `.ts`를 Node 22 타입 제거로 바로 실행한다. 링크는 실제 경로(prplay)로 풀리므로 `node_modules` 안 `.ts` 실행 제한에 걸리지 않는다. npm 배포 시에는 `dist/`로 컴파일한다(6.4).
+  - 구현(6.4): `pnpm build`(`tsc -p tsconfig.build.json`)가 Node에서 도는 부분(`src/index.ts`, `src/cli.ts`, `src/build/`)을 `dist/`로 컴파일한다(`rewriteRelativeImportExtensions`로 `.ts` import를 `.js`로 바꾸고 `.d.ts`도 만든다). 리뷰 화면(`src/runtime/`)은 사용자 컴포넌트와 같은 Vite 번들에서 변환되므로 소스 그대로 싣는다.
+  - `package.json`의 `bin`·`exports`는 로컬 링크용으로 `src/`를 가리키고, `publishConfig`가 배포 때 `dist/`로 바꾼다(pnpm `publish`·`pack`이 적용). `files`는 `dist`, `src/index.ts`(케이스가 import하는 `review-kit` alias 대상), `src/runtime`, `templates`.
+  - peer: `react`, `react-dom`, `msw`(리뷰 화면이 직접 쓴다). CSS-in-JS처럼 프로젝트마다 다른 라이브러리는 peer로 적지 않고 `sharedPackages`로 대상 것을 쓴다.
+  - 배포(`private` 해제, npm publish)는 사용자가 결정한다. 확인은 `pnpm pack` 결과를 빈 Vite + React 프로젝트에 설치해서 한다.
 
 ### 11.4 로컬 링크로 적용하기 (Knot, 2026-09-27)
 
@@ -584,6 +606,7 @@ export default defineConfig({
 1. Knot `package.json` devDependencies에 `"review-kit": "link:<prplay 경로>"`를 넣고 `pnpm install`한다.
 2. Knot 루트에 `review.config.ts`, `review/Wrapper.tsx`, `review/cases/*.tsx`를 둔다. 원본은 prplay `targets/knot/`에 같은 구조로 두고 복사한다.
 3. Knot `package.json` 스크립트: `"review:build": "review-kit build"`, `"review:dev": "review-kit dev"`.
+   - 폰트용 `pretendard`(1.3.9)도 devDependency로 넣는다(2026-09-29 사용자 승인, 2.3 표). review-kit에서는 뺐다.
 4. `pnpm review:dev 365` → localhost에서 확인, `pnpm review:build 365` → `review/dist/review-365.html`.
 
 ---
@@ -608,7 +631,7 @@ export default defineConfig({
 작업 위치 (2026-09-27 변경)
 - 코드는 처음부터 이 저장소(prplay)에서 개발한다. Knot 저장소에는 파일을 만들거나 고치지 않는다.
 - Knot은 빌드 대상이다. 컴포넌트 소스, `node_modules`, tsconfig를 경로로만 참조한다. 경로는 `KNOT_DIR` 환경 변수로 정하고, 기본값은 `progress.md`의 Knot 경로다.
-- 예외(2026-09-27, 사용자 승인): 6단계 라이브러리 링크 테스트는 PR #366 worktree에 11.4대로 `review-kit` 링크, `review.config.ts`, 케이스를 넣어서 한다. 이후 KNOT_DIR 방식 대신 Knot 폴더에서 `review-kit` 명령으로 빌드한다.
+- 예외(2026-09-27, 사용자 승인): 6단계 라이브러리 링크 테스트는 PR #366 worktree에 11.4대로 `review-kit` 링크, `review.config.ts`, 케이스(와 2026-09-29 승인한 폰트용 `pretendard` devDependency)를 넣어서 한다. 이후 KNOT_DIR 방식 대신 Knot 폴더에서 `review-kit` 명령으로 빌드한다.
 - 구조: `src/build/`(빌드 스크립트), `src/runtime/`(리뷰 화면과 모킹 엔진), `targets/knot/`(Knot 전용 `review.config.ts`, `review/Wrapper.tsx`, `review/cases/`. 6단계부터 Knot worktree에 복사해 쓰는 원본, 11.4), `dist/`(결과 HTML).
 - 런타임이 쓰는 `react`, `react-dom`, `@emotion/react`, `@tanstack/react-query`, `react-router`, `msw`는 대상 프로젝트의 `node_modules`에서 가져온다(11.3 peerDependencies와 같은 뜻). 그래야 컴포넌트와 리뷰 화면이 같은 인스턴스를 쓴다. 빌드 도구(Vite, 플러그인, react-docgen)와 `@mswjs/interceptors`는 prplay에 설치한다.
 
