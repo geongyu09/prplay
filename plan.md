@@ -1,6 +1,6 @@
 # 리뷰 플레이그라운드 개발 지식 정리
 
-PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 있는 HTML 파일 하나를 AI가 PR마다 만들고, Claude 아티팩트로 공유하는 도구를 만들기 위해 필요한 지식을 모은 문서다.
+PR 설명과, PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 있는 플레이그라운드를 담은 HTML 파일 하나를 AI가 PR마다 만들고, Claude 아티팩트로 공유하는 도구를 만들기 위해 필요한 지식을 모은 문서다.
 
 참고 링크
 - vite-plugin-singlefile: https://github.com/richardtallent/vite-plugin-singlefile
@@ -12,22 +12,24 @@ PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 
 
 ## 0. 만들려는 것
 
-리뷰어가 링크 하나를 열면 아래 화면이 나온다.
+리뷰어가 링크 하나를 열면 아래 화면이 나온다. PR 하나에 HTML은 하나다(3.4).
 
+- 개요 탭: AI가 정리한 PR 요약, 바뀐 점, 결정 목록, 리뷰 포인트, 플레이그라운드 목록을 보여준다. 처음 열면 이 탭이 보인다.
+- 대상 탭: 리뷰 대상(컴포넌트나 페이지)마다 탭이 하나씩 있고, 탭 안에 아래 플레이그라운드가 있다.
 - 미리보기: PR에서 바뀐 실제 컴포넌트나 페이지가 렌더링된다.
 - props 편집: 타입에 맞는 입력 컨트롤로 props를 바꾼다.
 - 프리셋: "아주 긴 제목", "문서 1개" 같은 엣지 케이스를 버튼 하나로 적용한다.
 - 목 데이터 편집: 네트워크 응답(JSON, 상태 코드, 지연)을 웹에서 수정한다.
 - 코드 패널: 실제 소스, PR diff, 파일 경로와 GitHub 링크를 보여준다.
-- 결정 목록: 작성자가 내린 결정을 한 줄씩 최대 5개만 보여준다.
+- 결정 목록: 작성자가 내린 결정을 한 줄씩 최대 5개만 개요 탭에 보여준다.
 
 역할 분담
 
 | 구분 | 누가 만드나 | 언제 | 예시 |
 | --- | --- | --- | --- |
 | 틀 (shell) | 사람 | 한 번 | 화면 배치, Provider 설정, 모킹 엔진, 빌드 스크립트 |
-| 내용 (case) | AI | PR마다 | `review/cases/365.tsx` |
-| 결과물 | 빌드 | PR마다 | `dist/review-365.html` |
+| 내용 (PR 폴더) | AI | PR마다 | `review/cases/366/`(`pr.ts` + 대상마다 케이스 파일) |
+| 결과물 | 빌드 | PR마다 | `dist/review-366.html` |
 
 ---
 
@@ -74,7 +76,7 @@ PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 
 ### 2.1 vite-plugin-singlefile
 
 - Vite 빌드 결과의 JS와 CSS를 `index.html` 안에 인라인해서 파일 하나만 남긴다.
-- 진입점이 여러 개인 앱은 지원하지 않는다. HTML 하나당 케이스 하나로 빌드하면 문제없다.
+- 진입점이 여러 개인 앱은 지원하지 않는다. 진입점은 하나로 두고, PR 폴더의 케이스 파일들은 가상 모듈 하나(`virtual:review-cases`)가 모두 import한다(3.4).
 - `public/` 폴더의 정적 파일은 인라인하지 않는다. 폰트와 이미지는 `import`로 가져와야 인라인된다.
 - SVG는 Vite가 직접 인라인하지 않으므로 svgr 같은 로더로 컴포넌트화해야 한다.
 - History API 기반 라우팅은 동작하지 않고 hash 라우팅이나 메모리 라우터를 써야 한다.
@@ -154,7 +156,7 @@ Knot에서 확인한 값 (2026-09-27, `frontend/` develop 기준)
 그 밖에
 - `package.json`에 이미 `review` 스크립트(`scripts/review.mjs`)가 있으므로 다른 이름(`review:build` 등)을 쓴다.
 - `tsconfig.json`의 `include`가 `./**/*.ts(x)`라서 `review/`도 Knot 타입 체크 대상이 된다.
-- #365는 이슈 번호이고 Stepper·Breadcrumb 구현 PR은 #366(`fe/feature/#365` 브랜치)이다. 케이스 파일 이름은 이슈 번호를 그대로 쓴다.
+- #365는 이슈 번호이고 Stepper·Breadcrumb 구현 PR은 #366(`fe/feature/#365` 브랜치)이다. 처음에는 케이스 파일 이름에 이슈 번호를 썼고, PR 폴더(3.4)로 바꾸며 PR번호 `366`으로 옮겼다(PR 링크와 저장 키가 PR번호를 쓴다).
 
 스파이크 결과 (2026-09-27, PR #366 브랜치)
 - 처음에는 Knot worktree(`2026-Knot-pr366/frontend/review/`)에서 만들었고, 같은 날 13장 '작업 위치'에 따라 prplay로 옮겼다. 아래 `review/...` 경로는 옮기기 전 이름이다(`review/build.ts` → `src/build/build.ts`, `review/shell/` → `src/runtime/`, `review/cases/` → `targets/knot/cases/`).
@@ -189,19 +191,28 @@ export type ReviewCase<P> = {
   presets?: Record<string, Partial<P>>;    // 엣지 케이스
   scenarios?: Record<string, MockRoute[]>; // 네트워크 시나리오
   initialPath?: string;                    // 페이지 케이스의 시작 URL
-  decisions?: string[];                    // 최대 5개, 한 문장씩
   impacts?: string[];                      // 영향받는 다른 파일
+};
+
+// PR 개요 (3.4). 결정 목록은 케이스가 아니라 여기에 둔다
+export type ReviewPr = {
+  title: string;          // PR 제목
+  summary: string;        // 무엇을 왜 바꿨는지 한두 문장
+  changes: string[];      // 바뀐 점. 최대 5개, 한 문장씩
+  decisions: string[];    // 작성자가 내린 결정. 최대 5개, 한 문장씩
+  reviewPoints: string[]; // 리뷰어가 특히 봐 주길 바라는 곳. 최대 3개, 한 문장씩
 };
 
 export type Actions = Record<string, (...args: unknown[]) => void>; // 함수 props 이름 → 호출 기록 로거
 
 export const defineCase = <P,>(c: ReviewCase<P>) => c;
+export const definePr = (pr: ReviewPr) => pr;
 ```
 
 ### 3.2 예시 (#365)
 
 ```tsx
-// review/cases/365.tsx
+// review/cases/366/stepper.tsx
 import { useState } from 'react';
 import Stepper from '@/shared/components/primitives/ui/Stepper';
 import { defineCase } from 'review-kit';
@@ -212,10 +223,6 @@ export default defineCase({
   props: { total: 3 },
   render: ({ total }, actions) => <Harness total={total} actions={actions} />,
   presets: { '문서 1개': { total: 1 }, '문서 12개': { total: 12 } },
-  decisions: [
-    'current는 1부터 센 값을 받는다.',
-    '순서 상태는 부모가 들고 Stepper는 onPrev, onNext만 알린다.',
-  ],
   impacts: [],
 });
 
@@ -266,6 +273,27 @@ function sourcesModule(casePath: string): Plugin {
 - 케이스 파일은 TSX라서 Node에서 바로 `import`할 수 없다. `sources` 목록만 정규식이나 TypeScript AST로 읽거나, `tsx`/`jiti` 같은 로더를 쓴다.
 - GitHub 링크에 브랜치 이름 대신 커밋 SHA를 넣어야 PR이 머지되거나 수정돼도 링크가 같은 코드를 가리킨다. 줄 범위는 `#L10-L25`로 붙인다.
 - 구현(4.1): 저장소 주소와 비교 기준은 `review.config.ts`의 `repoUrl`, `baseBranch`(없으면 `origin/main`)를 쓴다. `sources`는 설정 파일 폴더 기준 경로이고, Knot처럼 설정 폴더가 git 루트가 아니면(`frontend/`) `git rev-parse --show-prefix`를 앞에 붙여 GitHub 경로를 만든다. `git`을 쓸 수 없거나 비교 기준이 없으면 diff와 SHA는 비우고 빌드는 계속한다. `repoUrl`이 없으면 링크를 만들지 않는다. 가상 모듈은 `{ sha, base, files: [{ path, code, diff, url }] }`이고, dev에서는 파일이 바뀌면 다시 읽는다.
+
+### 3.4 PR 폴더와 개요 (2026-09-29 변경, 사용자 결정)
+
+처음에는 케이스 파일 하나를 HTML 하나로 빌드해서 대상이 여럿인 PR은 HTML도 여럿이었고, 화면에는 플레이그라운드만 있었다. 지금은 **PR 하나를 HTML 하나**로 빌드하고 PR 설명을 같이 넣는다.
+
+- PR 폴더: `<casesDir>/<PR번호>/` 하나가 PR 하나다. 안에 `pr.ts`(개요)와 대상마다 케이스 파일 `<이름>.tsx`를 둔다. `<이름>`은 컴포넌트 이름의 kebab-case이고, 대상은 최대 3개다.
+
+  ```
+  review/cases/366/
+    pr.ts            # export default definePr({ ... })
+    stepper.tsx      # export default defineCase({ ... })
+    breadcrumb.tsx
+  ```
+- `pr.ts`는 3.1의 `ReviewPr`를 `definePr`로 default export한다. 스킬은 늘 만들고, 빌드는 없어도 된다(없으면 개요 탭 없이 첫 대상 탭을 연다. `init` 예시처럼 PR이 아닌 폴더용).
+- 케이스 파일은 폴더 안의 `pr.ts`를 뺀 `*.tsx`이고, 탭은 파일 이름 순서다. 탭 이름은 케이스 `title`이다.
+- 빌드: `build <PR 폴더>` → `<outDir>/review-<폴더 이름>.html` 하나. 인자는 폴더 경로나 `casesDir` 안의 폴더 이름(`366`)이다. PR번호는 `--pr`, 없으면 폴더 이름 앞의 숫자다.
+- 가상 모듈 `virtual:review-cases`가 폴더의 케이스 파일을 모두 import하고, 케이스마다 docgen props(5.1)와 소스·diff(3.3)를 함께 내보낸다. `pr.ts`가 있으면 그것도 import한다. PR번호가 숫자이고 `repoUrl`이 있으면 PR 링크(`<repoUrl>/pull/<번호>`)도 만든다.
+- 화면 맨 위에 제목(`<title>`과 같은 `#PR번호 제목`, PR 링크가 있으면 링크)과 탭을 둔다: `[개요] [대상 1] [대상 2] ...`. 처음 열면 개요 탭이다. 탭이 하나뿐이면 탭 줄을 숨긴다.
+  - 개요 탭: 요약, 바뀐 점, 결정, 리뷰 포인트, 플레이그라운드 목록(대상 `title`과 첫 `sources` 경로. 누르면 그 탭으로 간다), PR 링크, 커밋 SHA와 비교 기준.
+  - 대상 탭: 지금까지의 플레이그라운드(미리보기, 코드 패널, 오른쪽 패널) 그대로다.
+- 탭을 바꾸면 그 대상의 플레이그라운드를 새로 마운트한다. props와 편집한 시나리오는 케이스마다 저장돼 있어(7장) 그대로 돌아오고, 시나리오 선택·호출 기록·요청 기록은 처음부터 시작한다. 모킹 엔진은 하나이고 탭을 바꿀 때 그 대상의 첫 시나리오 라우트로 바꾼다. 개요 탭에서는 미리보기를 그리지 않는다.
 
 ---
 
@@ -418,7 +446,7 @@ export function startMocking(getRoutes: () => MockRoute[]) {
 
 ## 7. 편집 상태 저장과 공유
 
-- 편집한 props와 시나리오는 `localStorage`에 `review-kit:{PR번호}:{케이스}` 키로 저장한다(아티팩트에서 동작 확인). PR번호는 빌드 옵션 `--pr`로 받고, 없으면 케이스 파일 이름 앞의 숫자를 쓴다. 케이스는 확장자를 뺀 케이스 파일 이름이다. 값은 `{ props, scenarios }` JSON이다.
+- 편집한 props와 시나리오는 `localStorage`에 `review-kit:{PR번호}:{케이스}` 키로 케이스마다 저장한다(아티팩트에서 동작 확인). PR번호는 빌드 옵션 `--pr`로 받고, 없으면 PR 폴더 이름 앞의 숫자를 쓴다(숫자가 없으면 `local`). 케이스는 확장자를 뺀 케이스 파일 이름이다(3.4). 값은 `{ props, scenarios }` JSON이다.
   - `scenarios`는 시나리오 이름 → 라우트 배열이고, 케이스 기본값과 다른 시나리오만 넣는다. 불러올 때는 케이스에 있는 시나리오 이름만 받는다. 선택한 시나리오는 저장하지 않고 늘 첫 시나리오로 시작한다(3.7).
   - JSON 복사/붙여넣기도 같은 `{ props, scenarios }` 모양을 쓴다. 붙여넣은 JSON에 있는 키만 바꾼다.
 - 다른 리뷰어에게 같은 상태를 보여주려면 "JSON 복사"와 "JSON 붙여넣기"를 둔다. 아티팩트는 `#key=value` hash와 쿼리 문자열을 iframe에 전달하지 않으므로(1.1) URL 공유는 하지 않는다.
@@ -430,7 +458,7 @@ export function startMocking(getRoutes: () => MockRoute[]) {
 
 ## 8. 코드 패널
 
-- 탭: 소스 전체, PR diff, 결정 목록, 영향 범위. 패널은 미리보기 아래에 두고, `sources`가 여러 개면 소스·diff 탭 안에서 파일을 고른다. 결정 목록은 오른쪽 패널에서 이 탭으로 옮긴다. diff가 비어 있으면 "비교 기준과 달라진 내용 없음"을 보여준다.
+- 탭: 소스 전체, PR diff, 영향 범위. 패널은 미리보기 아래에 두고, `sources`가 여러 개면 소스·diff 탭 안에서 파일을 고른다. 결정 목록은 PR 단위라 개요 탭으로 옮겼다(3.4). diff가 비어 있으면 "비교 기준과 달라진 내용 없음"을 보여준다.
 - 문법 강조: Shiki는 결과가 정확하지만 문법과 테마를 번들에 넣으면 파일이 커진다. `prism-react-renderer`가 가볍다. 단일 파일이므로 크기를 보고 고른다.
   - 비교 결과(2026-09-29, 4.3, `review-365.html`): 강조 없음 3705KB, `prism-react-renderer` 2.4.1(`themes.github`) 3789KB(+84KB), Shiki 4.4.3(`shiki/core` + JavaScript 정규식 엔진 + tsx 문법 + github-light 테마 하나) 4046KB(+341KB). **`prism-react-renderer`를 쓴다.**
   - 언어는 확장자로 고른다: `.tsx`·`.jsx`는 `tsx`, `.ts`·`.js`는 `typescript`, `.css`는 `css`, 그 외는 강조 없이 보여준다. 줄 번호를 붙인다.
@@ -488,7 +516,8 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
 ````
 
 구현(5.1~5.4, 2026-09-29): 실제 스킬은 `review-page/SKILL.md`(11.1)이고 위 초안에서 아래가 바뀌었다.
-- 케이스 파일: 리뷰할 대상이 하나면 `review/cases/<PR번호>.tsx`, 여럿이면 대상마다 `review/cases/<PR번호>-<이름>.tsx`(최대 3개, `<이름>`은 컴포넌트 이름의 kebab-case). 파일 이름 앞 숫자가 저장 키의 PR번호가 된다(7장).
+- 케이스 파일: 처음에는 대상마다 `review/cases/<PR번호>-<이름>.tsx`를 따로 빌드했으나, 지금은 PR 폴더 `review/cases/<PR번호>/`에 `pr.ts`와 대상마다 `<이름>.tsx`(최대 3개)를 쓰고 폴더 하나를 HTML 하나로 빌드한다(3.4). 폴더 이름이 저장 키의 PR번호가 된다(7장).
+- PR 개요(`pr.ts`): PR 본문·커밋·diff를 읽고 요약, 바뀐 점, 결정, 리뷰 포인트를 쓴다. 결정은 케이스에서 여기로 옮겼다.
 - `gh pr diff --name-only`는 git 루트 기준 경로라 `git rev-parse --show-prefix`를 떼고 `sources`에 넣는다.
 - 예시는 `example-component.tsx`(컴포넌트)와 `example-page.tsx`(페이지+네트워크) 두 개다.
 - 엣지 케이스 프리셋 목록과 시나리오 규칙을 스킬 본문에 고정한다(5.2, 6장).
@@ -506,11 +535,11 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
 ### 9.4 추가 검증 (선택)
 
 - Playwright로 결과 HTML을 `file://`로 열어 Error Boundary 문구가 없는지, 프리셋마다 렌더링이 되는지 확인하는 스모크 테스트를 스킬 검증 단계에 넣을 수 있다.
-- 구현(5.5): `review-page/scripts/smoke.mjs <html>...`. Playwright는 스킬 의존성에 넣지 않고 명령을 실행한 프로젝트의 `playwright`나 `@playwright/test`를 쓴다(없으면 건너뛴다고 알리고 0으로 끝낸다). 파일마다 `file://`로 열어 첫 화면, 프리셋 버튼 하나씩, 시나리오 버튼 하나씩을 누르고 각각 확인한다.
+- 구현(5.5): `review-page/scripts/smoke.mjs <html>...`. Playwright는 스킬 의존성에 넣지 않고 명령을 실행한 프로젝트의 `playwright`나 `@playwright/test`를 쓴다(없으면 건너뛴다고 알리고 0으로 끝낸다). 파일마다 `file://`로 열어 첫 화면을 확인하고, 대상 탭마다(3.4) 탭을 누른 뒤 프리셋 버튼 하나씩, 시나리오 버튼 하나씩을 누르고 각각 확인한다.
   - 실패: "미리보기 렌더링 오류" 문구, 페이지의 잡히지 않은 오류(`pageerror`), 콘솔 `error`, `file:`·`data:`·`blob:`이 아닌 외부 요청
   - 경고: 요청 기록의 501(목이 없는 요청)
   - 실패가 하나라도 있으면 1로 끝난다.
-  - 파일마다 누른 프리셋·시나리오 개수를 출력한다(5.6: 통과 한 줄만으로는 실제로 눌렀는지 알 수 없었다).
+  - 대상 탭마다 누른 프리셋·시나리오 개수를 출력한다(5.6: 통과 한 줄만으로는 실제로 눌렀는지 알 수 없었다).
 
 ---
 
@@ -524,7 +553,7 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
 
 - HTML 파일은 GitHub PR에 첨부해도 브라우저에서 렌더링되지 않으므로 공유 수단이 되지 않는다.
 - 단일 HTML은 로컬에서 더블클릭으로도 열리므로, 아티팩트 게시 전 확인은 `file://`로 한다.
-- 아티팩트 갤러리와 탭 이름은 HTML의 정적 `<title>`에서 나온다. 그래서 빌드할 때 케이스의 `title`을 넣어 `Review · {title}`로 만든다(실행 중 `document.title`과 같은 값). 케이스 파일은 TSX라 `sources`처럼 정규식으로 읽고, 읽지 못하면 케이스 파일 이름을 쓴다.
+- 아티팩트 갤러리와 탭 이름은 HTML의 정적 `<title>`에서 나온다. 그래서 빌드할 때 `pr.ts`의 `title`을 넣어 `Review · #{PR번호} {title}`로 만든다(PR번호가 숫자가 아니면 `#` 부분을 뺀다. 실행 중 `document.title`과 같은 값). `pr.ts`가 없으면 첫 케이스의 `title`, 그것도 읽지 못하면 폴더 이름을 쓴다. 파일은 `sources`처럼 정규식으로 읽는다.
 
 ---
 
@@ -541,6 +570,7 @@ review-page/
   SKILL.md                 # /review-page
   example-component.tsx    # 컴포넌트 케이스 예시
   example-page.tsx         # 페이지 + 네트워크 케이스 예시
+  example-pr.ts            # PR 개요(pr.ts) 예시
   package.json             # 빌드 도구와 리뷰 화면 의존성. 이 폴더에 설치한다 (11.3)
   package-lock.json        # 같은 버전이 설치되도록 함께 둔다
   src/
@@ -554,16 +584,17 @@ review-page/
     smoke.mjs
   templates/
     review.config.ts       # init이 복사하는 설정 파일
-    example/               # init이 review/로 복사하는 예시 컴포넌트와 케이스
+    example/               # init이 review/로 복사하는 예시 컴포넌트와 PR 폴더
       Example.tsx
-      cases/example.tsx
+      cases/example/pr.ts
+      cases/example/example.tsx
 ```
 
 명령 (설정 파일이 있는 프로젝트 폴더에서 `node .claude/skills/review-page/src/cli.ts <명령>`으로 실행한다. 스킬 안에서는 `node ${CLAUDE_SKILL_DIR}/src/cli.ts`)
-- `build <케이스>... [--pr 번호]`: 케이스마다 단일 HTML을 `outDir`에 만든다. 아티팩트에 올리는 결과물이다.
+- `build <PR 폴더>... [--pr 번호]`: PR 폴더마다 단일 HTML 하나를 `outDir`에 만든다(3.4). 아티팩트에 올리는 결과물이다.
   - 번들러의 `MODULE_LEVEL_DIRECTIVE`(`"use client"`) 경고는 단일 HTML에서 의미가 없으므로 숨긴다. 기존 MSW 핸들러 파일은 default와 `handlers` 중 있는 것을 쓰되, 없는 export를 정적으로 참조해 경고가 나지 않게 한다(5.6에서 스킬이 설정 문제로 오해했다).
-- `dev <케이스> [--port 5173]`: 같은 설정으로 Vite dev 서버를 띄운다. 케이스 파일이나 컴포넌트를 고치면 바로 반영(HMR)되므로 케이스를 쓰는 동안 확인용으로 쓴다. 단일 파일 플러그인은 빼고, 나머지 플러그인·가상 모듈·alias는 build와 같다. 최종 확인은 build 결과를 `file://`로 연다(10장).
-- `init [--force]`: 현재 폴더에 `review.config.ts`(`templates/review.config.ts`, `git remote get-url origin`이 GitHub면 `repoUrl`을 채움)와 바로 빌드해 볼 수 있는 `review/cases/example.tsx`, `review/Example.tsx`(`templates/example/`)를 만든다. 이미 있는 파일은 건너뛰고 알린다(`--force`면 덮어쓴다). `tsconfig`·`.gitignore`·`package.json`은 고치지 않고 넣을 내용을 출력한다(11.2의 tsconfig 두 줄, `.gitignore`의 `review/dist/`와 `.claude/skills/review-page/node_modules/`). `msw`·`react`·`react-dom`이 설치돼 있지 않으면 설치하라고 알린다. 스킬은 설정 파일이 없을 때 이 명령으로 처음 설정을 한다(9.2).
+- `dev <PR 폴더> [--port 5173]`: 같은 설정으로 Vite dev 서버를 띄운다. 케이스 파일이나 컴포넌트를 고치면 바로 반영(HMR)되므로 케이스를 쓰는 동안 확인용으로 쓴다. 단일 파일 플러그인은 빼고, 나머지 플러그인·가상 모듈·alias는 build와 같다. 최종 확인은 build 결과를 `file://`로 연다(10장).
+- `init [--force]`: 현재 폴더에 `review.config.ts`(`templates/review.config.ts`, `git remote get-url origin`이 GitHub면 `repoUrl`을 채움)와 바로 빌드해 볼 수 있는 `review/cases/example/`(`pr.ts`, `example.tsx`)와 `review/Example.tsx`(`templates/example/`)를 만든다. 이미 있는 파일은 건너뛰고 알린다(`--force`면 덮어쓴다). `tsconfig`·`.gitignore`·`package.json`은 고치지 않고 넣을 내용을 출력한다(11.2의 tsconfig 두 줄, `.gitignore`의 `review/dist/`와 `.claude/skills/review-page/node_modules/`). `msw`·`react`·`react-dom`이 설치돼 있지 않으면 설치하라고 알린다. 스킬은 설정 파일이 없을 때 이 명령으로 처음 설정을 한다(9.2).
 
 ### 11.2 프로젝트 설정 파일
 
@@ -618,9 +649,9 @@ export default defineConfig({
 Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인은 scratchpad에 clone한 Knot 복사본에서 한다.
 
 1. Knot 복사본 `frontend/`에 prplay `review-page/`를 `.claude/skills/review-page/`로 복사한다.
-2. `review.config.ts`, `review/Wrapper.tsx`, `review/fonts.css`, `review/cases/*.tsx`를 둔다. 원본은 prplay `targets/knot/`에 같은 구조로 있다. 폰트용 `pretendard`(1.3.9)는 복사본의 devDependency로 넣는다(2.3 표).
+2. `review.config.ts`, `review/Wrapper.tsx`, `review/fonts.css`, `review/cases/<폴더>/`를 둔다. 원본은 prplay `targets/knot/`에 같은 구조로 있다. 폰트용 `pretendard`(1.3.9)는 복사본의 devDependency로 넣는다(2.3 표).
 3. tsconfig `paths`에 `review-kit` 한 줄을 넣는다(11.2). Knot tsconfig `include`는 `./**/*.ts(x)`라 `review/`가 이미 들어간다.
-4. `node .claude/skills/review-page/src/cli.ts build 365` → `review/dist/review-365.html`, `dev 365` → localhost.
+4. `node .claude/skills/review-page/src/cli.ts build 366` → `review/dist/review-366.html`(Stepper·Breadcrumb 탭 하나씩), `dev 366` → localhost.
 
 이전 방식(2026-09-27~29): PR #366 worktree에 `"review-kit": "link:<prplay 경로>"`를 devDependency로 넣고 `review:build`·`review:dev` 스크립트로 빌드했다(사용자 승인). 스킬 방식으로 바꾸며 그 worktree의 설정은 치웠다.
 
@@ -637,7 +668,7 @@ Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인
 
 직접 만들기 전에 Cosmos나 Ladle의 빌드 결과에 vite-plugin-singlefile을 붙일 수 있는지 먼저 확인하면 틀을 새로 만드는 비용을 줄일 수 있다.
 
-확인 결과(2026-09-27, 1.9): 두 도구 모두 스토리 선택이 쿼리 문자열과 History API에 묶여 있어, 단일 HTML에서는 History API 라우팅을 쓰지 않는다는 2.1의 제약과 맞지 않는다. 아티팩트는 쿼리 문자열을 iframe에 전달하지 않으므로 특정 스토리로 바로 여는 링크도 쓸 수 없다. 쓰려면 라우터를 패치해야 하므로, PR마다 케이스 하나를 파일 하나로 빌드하는 지금 방식(직접 만들기)을 유지한다. 참고할 부분(fixture 형식, Controls, actions)만 가져온다.
+확인 결과(2026-09-27, 1.9): 두 도구 모두 스토리 선택이 쿼리 문자열과 History API에 묶여 있어, 단일 HTML에서는 History API 라우팅을 쓰지 않는다는 2.1의 제약과 맞지 않는다. 아티팩트는 쿼리 문자열을 iframe에 전달하지 않으므로 특정 스토리로 바로 여는 링크도 쓸 수 없다. 쓰려면 라우터를 패치해야 하므로, PR 하나를 파일 하나로 빌드하는 지금 방식(직접 만들기)을 유지한다. 참고할 부분(fixture 형식, Controls, actions)만 가져온다.
 
 ---
 
@@ -656,6 +687,7 @@ Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인
 4. **코드 패널**: 소스, diff, GitHub 링크, 결정 목록, 영향 범위를 붙인다.
 5. **스킬**: 1~4에서 만든 케이스 파일을 예시로 넣어 스킬을 작성하고, 다른 PR 두세 개에 돌려 결과를 고친다.
 6. **스킬로 묶기**: `targets/knot/`의 설정을 `review.config.ts`(`defineConfig`) 형식으로 바꾸고, 리뷰 화면·빌드·스크립트를 스킬 폴더 하나(`review-page/`)에 넣어 복사만으로 쓰게 한다(11장). 처음에는 `review-kit` npm 패키지로 분리했다가 2026-09-29 사용자 결정으로 바꿨다.
+7. **PR 하나에 HTML 하나**: PR 폴더(`pr.ts` + 대상별 케이스)를 HTML 하나로 빌드하고, 맨 위 탭에 개요(PR 설명)와 대상 플레이그라운드를 둔다(3.4). 결정 목록은 케이스에서 개요로 옮긴다.
 
 ---
 

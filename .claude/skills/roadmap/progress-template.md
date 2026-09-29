@@ -55,6 +55,14 @@
 - [ ] 6.5 Knot 적용과 처음 설정 단계
 - [ ] 6.6 README
 
+## 7단계. PR 하나에 HTML 하나
+- [ ] 7.1 ReviewPr·definePr, 케이스 decisions 제거
+- [ ] 7.2 PR 폴더 빌드와 virtual:review-cases
+- [ ] 7.3 맨 위 탭과 개요 탭
+- [ ] 7.4 스모크 테스트 탭 순회
+- [ ] 7.5 스킬·예시·init·targets를 PR 폴더로
+- [ ] 7.6 Knot 확인과 README
+
 ## 확인 항목 (plan.md 14장)
 - [ ] 아티팩트 파일 크기 상한
 - [ ] 아티팩트에서 외부 이미지와 폰트 로딩이 막히는지
