@@ -33,11 +33,6 @@ export default defineCase({
       label: "워크스페이스에 연결된 노션 페이지를 모두 다시 불러오기",
     },
   },
-  decisions: [
-    "로딩이면 disabled도 함께 걸고, 둘 다 참이면 로딩 모양을 그린다.",
-    "로딩 중에도 라벨을 opacity 0으로 남겨 너비와 스크린리더 이름을 유지한다.",
-    "높이는 height가 아니라 padding으로 만든다.",
-  ],
   // scripts/find-impacts.sh 결과에서 관계있는 파일만
   impacts: [
     "src/modules/features/auth/GithubLoginButton/index.tsx",
@@ -56,10 +51,6 @@ export default defineCase({
   props: { total: 3 },
   render: ({ total }, actions) => <Harness total={total} actions={actions} />,
   presets: { "문서 1개": { total: 1 }, "문서 12개": { total: 12 } },
-  decisions: [
-    "current는 1부터 센 값을 받는다.",
-    "순서 상태는 부모가 들고 Stepper는 onPrev, onNext만 알린다.",
-  ],
   impacts: [],
 });
 

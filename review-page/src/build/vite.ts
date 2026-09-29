@@ -24,16 +24,6 @@ export function targetPackages(targetDir: string, packages: string[]): Plugin {
   };
 }
 
-// 케이스 파일을 `virtual:review-case`로 주입한다 (plan.md 2.2)
-export function caseModule(casePath: string): Plugin {
-  const id = "virtual:review-case";
-  return {
-    name: "review-case",
-    resolveId: (source) => (source === id ? casePath : null),
-  };
-}
-
-// 케이스의 sources 첫 파일에서 컴포넌트 props를 읽어 `virtual:review-props`로 주입한다 (plan.md 5.1)
 // 케이스 파일은 TSX라 Node에서 import할 수 없으므로 sources 배열만 정규식으로 읽는다 (plan.md 3.3)
 function readSources(casePath: string): string[] {
   const text = fs.readFileSync(casePath, "utf8");
@@ -43,20 +33,20 @@ function readSources(casePath: string): string[] {
   return [...match[1].matchAll(/(["'`])((?:(?!\1).)+)\1/g)].map((m) => m[2]);
 }
 
-// 결과 HTML의 정적 <title>. 아티팩트 갤러리 이름이 이 태그에서 나오므로 케이스 title을 넣는다 (plan.md 10)
-function readTitle(casePath: string): string {
-  const text = fs.readFileSync(casePath, "utf8");
-  return text.match(/title:\s*(["'`])((?:(?!\1).)+)\1/)?.[2] ?? caseName(casePath);
+// title 값 하나를 정규식으로 읽는다. pr.ts와 케이스 파일 모두 `title: "..."` 형태다 (plan.md 10)
+function readTitle(file: string): string | undefined {
+  if (!fs.existsSync(file)) return undefined;
+  return fs.readFileSync(file, "utf8").match(/title:\s*(["'`])((?:(?!\1).)+)\1/)?.[2];
 }
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function titleHtml(casePath: string): Plugin {
+// 결과 HTML의 정적 <title>. 아티팩트 갤러리 이름이 이 태그에서 나온다 (plan.md 10)
+function titleHtml(title: string): Plugin {
   return {
     name: "review-title",
-    transformIndexHtml: (html) =>
-      html.replace(/<title>[^<]*<\/title>/, `<title>Review · ${escapeHtml(readTitle(casePath))}</title>`),
+    transformIndexHtml: (html) => html.replace(/<title>[^<]*<\/title>/, `<title>Review · ${escapeHtml(title)}</title>`),
   };
 }
 
@@ -87,37 +77,29 @@ function toPropMeta(tsType: DocgenType | undefined) {
   return { kind: "json" };
 }
 
-export function propsModule(casePath: string, root: string): Plugin {
-  const id = "virtual:review-props";
-  return {
-    name: "review-props",
-    resolveId: (source) => (source === id ? "\0" + id : null),
-    load(resolved) {
-      if (resolved !== "\0" + id) return null;
-      const [source] = readSources(casePath);
-      const props: Record<string, unknown> = {};
-      if (source) {
-        const file = path.join(root, source);
-        this.addWatchFile(file);
-        const docs = parseDocgen(fs.readFileSync(file, "utf8"), {
-          filename: file,
-          resolver: new builtinResolvers.FindExportedDefinitionsResolver(),
-        });
-        for (const [name, prop] of Object.entries(docs[0]?.props ?? {})) {
-          props[name] = {
-            ...toPropMeta(prop.tsType as DocgenType | undefined),
-            required: prop.required,
-            description: prop.description || undefined,
-            raw: (prop.tsType as DocgenType | undefined)?.raw ?? prop.tsType?.name,
-          };
-        }
-      }
-      return `export default ${JSON.stringify(props)};`;
-    },
-  };
+// sources 첫 파일의 default export 컴포넌트 props (plan.md 5.1)
+function readProps(casePath: string, root: string, watch: (file: string) => void) {
+  const [source] = readSources(casePath);
+  const props: Record<string, unknown> = {};
+  if (!source) return props;
+  const file = path.join(root, source);
+  watch(file);
+  const docs = parseDocgen(fs.readFileSync(file, "utf8"), {
+    filename: file,
+    resolver: new builtinResolvers.FindExportedDefinitionsResolver(),
+  });
+  for (const [name, prop] of Object.entries(docs[0]?.props ?? {})) {
+    props[name] = {
+      ...toPropMeta(prop.tsType as DocgenType | undefined),
+      required: prop.required,
+      description: prop.description || undefined,
+      raw: (prop.tsType as DocgenType | undefined)?.raw ?? prop.tsType?.name,
+    };
+  }
+  return props;
 }
 
-// sources의 파일 내용, 비교 기준과의 diff, 커밋 SHA 기준 GitHub 링크를 `virtual:review-sources`로 주입한다 (plan.md 3.3)
+// 케이스마다 sources의 파일 내용, 비교 기준과의 diff, 커밋 SHA 기준 GitHub 링크를 casesModule에 넣는다 (plan.md 3.3)
 // git을 쓸 수 없거나 비교 기준이 없으면 diff와 SHA는 비우고 빌드는 계속한다
 function git(root: string, args: string[]) {
   try {
@@ -127,29 +109,56 @@ function git(root: string, args: string[]) {
   }
 }
 
-export function sourcesModule(casePath: string, config: ResolvedConfig): Plugin {
-  const id = "virtual:review-sources";
+// PR 폴더의 케이스 파일 목록. pr.ts를 뺀 *.tsx를 파일 이름 순서로 (plan.md 3.4)
+export function listCaseFiles(prDir: string) {
+  return fs
+    .readdirSync(prDir)
+    .filter((f) => f.endsWith(".tsx"))
+    .sort()
+    .map((f) => path.join(prDir, f));
+}
+
+// PR 폴더를 `virtual:review-cases`로 주입한다 (plan.md 3.4)
+// default: 케이스마다 { name, case, props(5.1), files(3.3) }, pr: pr.ts 또는 null, meta: PR번호·링크·제목·SHA
+function casesModule(prDir: string, config: ResolvedConfig, meta: { pr: string; prUrl?: string; title: string }): Plugin {
+  const id = "virtual:review-cases";
   return {
-    name: "review-sources",
+    name: "review-cases",
     resolveId: (source) => (source === id ? "\0" + id : null),
     load(resolved) {
       if (resolved !== "\0" + id) return null;
+      const watch = (file: string) => this.addWatchFile(file);
       const { root, repoUrl } = config;
       const base = config.baseBranch ?? "origin/main";
       const sha = git(root, ["rev-parse", "HEAD"])?.trim() ?? "";
       // 설정 폴더가 git 루트가 아니면(Knot의 frontend/) GitHub 경로 앞에 붙인다
       const prefix = git(root, ["rev-parse", "--show-prefix"])?.trim() ?? "";
-      const files = readSources(casePath).map((p) => {
-        const file = path.join(root, p);
-        this.addWatchFile(file);
-        return {
-          path: p,
-          code: fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "",
-          diff: git(root, ["diff", `${base}...HEAD`, "--", p]) ?? "",
-          url: repoUrl && sha ? `${repoUrl.replace(/\/$/, "")}/blob/${sha}/${prefix}${p}` : undefined,
-        };
-      });
-      return `export default ${JSON.stringify({ sha, base, files })};`;
+      const readFiles = (casePath: string) =>
+        readSources(casePath).map((p) => {
+          const file = path.join(root, p);
+          watch(file);
+          return {
+            path: p,
+            code: fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "",
+            diff: git(root, ["diff", `${base}...HEAD`, "--", p]) ?? "",
+            url: repoUrl && sha ? `${repoUrl.replace(/\/$/, "")}/blob/${sha}/${prefix}${p}` : undefined,
+          };
+        });
+
+      const prFile = path.join(prDir, "pr.ts");
+      const cases = listCaseFiles(prDir);
+      const lines = [
+        fs.existsSync(prFile) ? `export { default as pr } from ${JSON.stringify(prFile)};` : "export const pr = null;",
+        ...cases.map((f, i) => `import c${i} from ${JSON.stringify(f)};`),
+        `export const meta = ${JSON.stringify({ ...meta, sha, base })};`,
+        `export default [${cases
+          .map(
+            (f, i) =>
+              `{ name: ${JSON.stringify(caseName(f))}, case: c${i}, props: ${JSON.stringify(readProps(f, root, watch))}, files: ${JSON.stringify(readFiles(f))} }`,
+          )
+          .join(",\n")}];`,
+      ];
+      return lines.join("\n");
     },
   };
 }
@@ -195,10 +204,17 @@ export function caseName(casePath: string) {
   return path.basename(casePath).replace(/\.tsx?$/, "");
 }
 
-export function viteConfig(config: ResolvedConfig, casePath: string, pr?: string): InlineConfig {
-  const name = caseName(casePath);
-  // plan.md 7. PR번호는 --pr, 없으면 케이스 파일 이름 앞의 숫자
-  const prNumber = pr ?? name.match(/^\d+/)?.[0] ?? "local";
+export function viteConfig(config: ResolvedConfig, prDir: string, pr?: string): InlineConfig {
+  const cases = listCaseFiles(prDir);
+  if (cases.length === 0) throw new Error(`PR 폴더에 케이스 파일(*.tsx)이 없습니다: ${prDir}`);
+  const folder = path.basename(prDir);
+  // plan.md 7. PR번호는 --pr, 없으면 폴더 이름 앞의 숫자
+  const prNumber = pr ?? folder.match(/^\d+/)?.[0] ?? "local";
+  const isNumber = /^\d+$/.test(prNumber);
+  // plan.md 10. pr.ts 제목, 없으면 첫 케이스 제목, 그것도 없으면 폴더 이름
+  const name = readTitle(path.join(prDir, "pr.ts")) ?? readTitle(cases[0]) ?? folder;
+  const title = isNumber ? `#${prNumber} ${name}` : name;
+  const prUrl = isNumber && config.repoUrl ? `${config.repoUrl.replace(/\/$/, "")}/pull/${prNumber}` : undefined;
   return {
     configFile: false,
     root: fromKit("src/runtime"),
@@ -207,19 +223,14 @@ export function viteConfig(config: ResolvedConfig, casePath: string, pr?: string
       targetPackages(config.root, config.sharedPackages),
       ...(config.svgr ? [svgr(config.svgr)] : []),
       ...(config.plugins ?? []),
-      caseModule(casePath),
-      propsModule(casePath, config.root),
-      sourcesModule(casePath, config),
+      casesModule(prDir, config, { pr: prNumber, prUrl, title }),
       wrapperModule(config.wrapper),
       handlersModule(config.mockHandlers),
       stylesModule(config.styles),
-      titleHtml(casePath),
+      titleHtml(title),
     ],
     oxc: { jsx: { runtime: "automatic", importSource: config.jsxImportSource ?? "react" } },
-    define: {
-      ...config.define,
-      __REVIEW_STORAGE_KEY__: JSON.stringify(`review-kit:${prNumber}:${name}`),
-    },
+    define: config.define,
     resolve: {
       alias: { ...config.alias, "review-kit": fromKit("src/index.ts") },
     },

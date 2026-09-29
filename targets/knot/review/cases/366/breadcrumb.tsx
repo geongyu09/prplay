@@ -13,9 +13,5 @@ export default defineCase({
     },
     "빈 제목": { current: "" },
   },
-  decisions: [
-    "위치만 보여주므로 위 단계를 눌러도 이동하지 않는다.",
-    "지금 항목은 폭을 넘으면 한 줄에서 말줄임한다.",
-  ],
   impacts: [],
 });

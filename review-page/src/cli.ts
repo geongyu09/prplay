@@ -11,10 +11,10 @@ import { pathToFileURL } from "node:url";
 const kitRoot = path.resolve(import.meta.dirname, "..");
 
 const USAGE = `사용법 (node <스킬 폴더>/src/cli.ts <명령>)
-  build <케이스>... [--pr 번호]   단일 HTML 빌드
-  dev <케이스> [--port 5173]       dev 서버(HMR)
-  init [--force]                  설정 파일과 예시 케이스 만들기
-케이스는 파일 경로나 casesDir 안의 이름(예: 365)`;
+  build <PR 폴더>... [--pr 번호]   PR 폴더마다 단일 HTML 빌드
+  dev <PR 폴더> [--port 5173]       dev 서버(HMR)
+  init [--force]                   설정 파일과 예시 PR 폴더 만들기
+PR 폴더는 폴더 경로나 casesDir 안의 이름(예: 366)`;
 
 // review.config.ts의 `review-kit` import를 스킬 폴더의 index.ts로 돌린다 (plan.md 11.2)
 const kitIndex = pathToFileURL(path.join(kitRoot, "src/index.ts")).href;
@@ -51,21 +51,21 @@ async function main() {
   if (command !== "build" && command !== "dev") throw new Error(USAGE);
 
   ensureDependencies();
-  const { loadConfig, resolveCase } = await import("./build/config.ts");
+  const { loadConfig, resolvePrDir } = await import("./build/config.ts");
   if (command === "build") {
     const pr = takeOption(args, "--pr");
     if (args.length === 0) throw new Error(USAGE);
-    const { buildCase } = await import("./build/build.ts");
+    const { buildPr } = await import("./build/build.ts");
     const config = await loadConfig();
     fs.mkdirSync(config.outDir, { recursive: true });
-    for (const arg of args) await buildCase(config, resolveCase(config, arg), pr);
+    for (const arg of args) await buildPr(config, resolvePrDir(config, arg), pr);
     return;
   }
   const port = takeOption(args, "--port");
   if (args.length !== 1) throw new Error(USAGE);
-  const { devCase } = await import("./build/dev.ts");
+  const { devPr } = await import("./build/dev.ts");
   const config = await loadConfig();
-  await devCase(config, resolveCase(config, args[0]), port ? Number(port) : undefined);
+  await devPr(config, resolvePrDir(config, args[0]), port ? Number(port) : undefined);
 }
 
 main().catch((error) => {

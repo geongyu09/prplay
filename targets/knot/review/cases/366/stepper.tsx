@@ -9,10 +9,6 @@ export default defineCase({
   props: { total: 3 },
   render: ({ total }, actions) => <Harness total={total} actions={actions} />,
   presets: { "문서 1개": { total: 1 }, "문서 12개": { total: 12 } },
-  decisions: [
-    "current는 1부터 센 값을 받는다.",
-    "순서 상태는 부모가 들고 Stepper는 onPrev, onNext만 알린다.",
-  ],
   impacts: [],
 });
 

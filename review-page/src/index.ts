@@ -20,14 +20,24 @@ export type ReviewCase<P> = {
   presets?: Record<string, Partial<P>>;
   scenarios?: Record<string, MockRoute[]>;
   initialPath?: string;
-  decisions?: string[];
   impacts?: string[];
+};
+
+// PR 폴더의 pr.ts. 결과 HTML의 개요 탭이 된다 (plan.md 3.4)
+export type ReviewPr = {
+  title: string;
+  summary: string;
+  changes: string[];
+  decisions: string[];
+  reviewPoints: string[];
 };
 
 // 함수 props 이름 → 호출 기록 로거 (plan.md 5.1)
 export type Actions = Record<string, (...args: unknown[]) => void>;
 
 export const defineCase = <P,>(c: ReviewCase<P>) => c;
+
+export const definePr = (pr: ReviewPr) => pr;
 
 // 주소 표시줄 연결 (plan.md 4.1). wrapper가 라우터 안에서 현재 주소를 알리고 이동 함수를 연결한다
 export type ReviewAddress = {

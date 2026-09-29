@@ -51,27 +51,42 @@ for (const file of files) {
     if (!shadowText) problems.push(`[${step}] 리뷰 화면이 그려지지 않음`);
   };
 
+  // 첫 화면은 개요 탭(pr.ts가 있을 때)이나 첫 대상 탭이다
   await page.goto(pathToFileURL(path.resolve(file)).href);
   await check();
 
   const sectionButtons = (title) =>
     page.locator(".rv-section").filter({ has: page.locator("h2", { hasText: title }) }).locator(".rv-row").first().locator("button");
 
-  const clicked = {};
-  for (const kind of ["프리셋", "시나리오"]) {
-    const buttons = sectionButtons(kind);
-    const count = await buttons.count();
-    clicked[kind] = count;
-    for (let i = 0; i < count; i++) {
-      const name = (await buttons.nth(i).innerText()).trim();
-      step = `${kind} ${name}`;
-      await buttons.nth(i).click();
+  // 대상 탭마다 탭을 누르고 프리셋·시나리오를 하나씩 누른다 (plan.md 3.4, 9.4). 탭이 하나뿐이면 탭 줄이 없다
+  const pageTabs = page.locator(".rv-page-tabs .rv-tab").filter({ hasNotText: /^개요$/ });
+  const tabCount = await pageTabs.count();
+  const results = [];
+  for (let t = 0; t < Math.max(tabCount, 1); t++) {
+    let tabName = "";
+    if (tabCount > 0) {
+      tabName = (await pageTabs.nth(t).innerText()).trim();
+      step = `${tabName} 탭`;
+      await pageTabs.nth(t).click();
       await check();
     }
+    const clicked = {};
+    for (const kind of ["프리셋", "시나리오"]) {
+      const buttons = sectionButtons(kind);
+      const count = await buttons.count();
+      clicked[kind] = count;
+      for (let i = 0; i < count; i++) {
+        const name = (await buttons.nth(i).innerText()).trim();
+        step = `${tabName ? `${tabName} ` : ""}${kind} ${name}`;
+        await buttons.nth(i).click();
+        await check();
+      }
+    }
+    results.push(`${tabName ? `${tabName}: ` : ""}프리셋 ${clicked["프리셋"]}개, 시나리오 ${clicked["시나리오"]}개`);
   }
 
-  // 실제로 누른 개수를 같이 보여 준다 (plan.md 9.4)
-  const label = `${path.relative(process.cwd(), file)} (프리셋 ${clicked["프리셋"]}개, 시나리오 ${clicked["시나리오"]}개)`;
+  // 실제로 누른 개수를 탭마다 같이 보여 준다 (plan.md 9.4)
+  const label = `${path.relative(process.cwd(), file)} (${results.join(" / ")})`;
   if (problems.length > 0) {
     failed++;
     console.log(`실패 ${label}`);

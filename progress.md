@@ -58,6 +58,14 @@
 - [x] 6.5 Knot 적용과 처음 설정 단계
 - [x] 6.6 README
 
+## 7단계. PR 하나에 HTML 하나
+- [x] 7.1 ReviewPr·definePr, 케이스 decisions 제거
+- [x] 7.2 PR 폴더 빌드와 virtual:review-cases
+- [x] 7.3 맨 위 탭과 개요 탭
+- [x] 7.4 스모크 테스트 탭 순회
+- [x] 7.5 스킬·예시·init·targets를 PR 폴더로
+- [x] 7.6 Knot 확인과 README
+
 ## 확인 항목 (plan.md 14장)
 - [x] 아티팩트 파일 크기 상한 → 16MB(data: URI 포함), 12.6MB 게시 성공
 - [x] 아티팩트에서 외부 이미지와 폰트 로딩이 막히는지 → 막힘(Google Fonts CSS·일부 CDN 스크립트만 허용)
@@ -78,6 +86,7 @@
 - 6단계 방향 변경 2026-09-29: 사용자 결정으로 npm 패키지 대신 스킬 폴더 하나로 묶는다(plan.md 11장). 스파이크: 스킬 폴더만 복사한 Knot 복사본에서 기존 4케이스 빌드·스모크·tsc 통과, 빈 Vite+React에서 예시 1006KB. 차이는 lockfile 없이 설치한 CodeMirror 버전뿐
 
 - 6단계 2026-09-29 (스킬 폴더만 복사한 Knot 복사본: npm ci 자동 설치 후 4케이스 빌드 결과가 스파이크 결과와 바이트 단위로 같음, 스모크·tsc 통과, dev 서버 응답. 빈 Vite+React: init → 예시 1006KB, 스모크·tsc 통과, package.json 그대로. prplay 루트에 npm 배포 설정·dist 없음)
+- 7단계 2026-09-29 (Knot 복사본: `build 366` HTML 하나에 개요·Breadcrumb·Stepper 탭, 개요에 요약·바뀐 점·결정·리뷰 포인트·플레이그라운드 목록 표시(스크린샷 확인), 케이스 decisions 없음, 366·button·workspace-home·example 스모크·tsc 통과, dev 서버 응답. 아티팩트 게시 확인은 남음)
 
 ## 막힌 점
 
@@ -120,3 +129,4 @@
 - 2026-09-29 6.1~6.4 스킬 폴더 review-page/에 package.json·package-lock.json(CodeMirror 등 버전이 이전 pnpm과 같음) 추가, cli.ts가 lockfile 해시로 npm ci. prplay 루트 package.json은 타입 검사 도구만(bin·exports·publishConfig·런타임 의존성 제거), pnpm-workspace.yaml·dist 제거, tsconfig를 review-page/src로
 - 2026-09-29 6.5 scratchpad Knot 복사본에 스킬 폴더·targets/knot 복사: 4케이스 빌드(3.8MB 안팎)·스모크·tsc·dev 서버 확인. 빈 Vite+React에서 init → build example 1006KB → 스모크·tsc 통과
 - 2026-09-29 6.6 README를 스킬 복사·처음 설정·node cli.ts 명령 기준으로 다시 씀(styles 설정 추가)
+- 2026-09-29 7.1~7.6 PR 하나에 HTML 하나(사용자 결정, plan.md 3.4): PR 폴더 `review/cases/<PR번호>/`(pr.ts + 대상별 케이스), `definePr`, `virtual:review-cases`(케이스·props·소스 묶음, pr, meta), 맨 위 탭과 개요 탭(Overview.tsx), 플레이그라운드를 Playground.tsx로 분리(탭 전환 시 activateCase로 라우트 교체), 케이스별 저장 키, 코드 패널 결정 탭 제거, 스모크 탭 순회. targets 365 → 366 폴더(PR번호), button에 pr.ts, 스킬·예시(example-pr.ts)·init 템플릿·README 갱신

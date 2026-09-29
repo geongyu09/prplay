@@ -1,12 +1,14 @@
 ---
 name: review-page
-description: 현재 브랜치(또는 인자로 준 번호)의 PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 만져 볼 수 있는 케이스 파일을 만들고 단일 HTML로 빌드한다. 처음이면 설정 파일부터 만든다.
+description: 현재 브랜치(또는 인자로 준 번호)의 PR을 리뷰 페이지 HTML 하나로 만든다. PR 설명(개요 탭)과, 바뀐 컴포넌트·페이지를 리뷰어가 직접 만져 볼 수 있는 플레이그라운드(대상 탭)가 들어간다. 처음이면 설정 파일부터 만든다.
 argument-hint: "[PR번호]"
 disable-model-invocation: true
 allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git log *) Bash(git rev-parse *) Bash(npx tsc *) Bash(node *review-page/src/cli.ts *) Bash(bash *find-impacts.sh *) Bash(node *smoke.mjs *) Read Grep Glob Write Edit
 ---
 
-# 리뷰 플레이그라운드 케이스 만들기
+# 리뷰 페이지 만들기
+
+PR 하나에 PR 폴더 `review/cases/<PR번호>/` 하나를 만들고, 빌드하면 HTML 하나가 나온다. 화면 맨 위 탭은 `[개요] [대상 1] [대상 2] ...`이고, 개요는 `pr.ts`, 대상 탭은 케이스 파일 하나씩이다.
 
 ## PR 정보
 
@@ -14,7 +16,7 @@ allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git l
 - 바뀐 파일(git 루트 기준): !`gh pr diff $ARGUMENTS --name-only 2>/dev/null || echo "(없음)"`
 - 이 폴더의 git 루트 기준 위치(바뀐 파일 경로에서 떼어 낸다): !`git rev-parse --show-prefix`
 - 설정 파일: !`ls review.config.ts 2>/dev/null || echo "(없음. 아래 '처음 설정'을 먼저 한다)"`
-- 기존 케이스: !`ls review/cases 2>/dev/null || echo "(없음)"`
+- 기존 PR 폴더: !`ls review/cases 2>/dev/null || echo "(없음)"`
 
 모든 명령은 `review.config.ts`가 있는 폴더에서 실행한다. 빌드 명령은 `node ${CLAUDE_SKILL_DIR}/src/cli.ts`다. 처음 실행하면 이 스킬 폴더에 빌드 도구를 설치(`npm ci`, 약 66MB)하므로 시간이 걸린다.
 
@@ -29,24 +31,25 @@ allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git l
 5. `node ${CLAUDE_SKILL_DIR}/src/cli.ts build example`로 예시가 빌드되는지 확인한다. 실패하면 설정 파일을 고쳐 다시 한다(3번 실패하면 멈추고 보고). 예시 파일은 사용자가 원하면 지운다.
 6. PR 케이스 작업('할 일')으로 넘어간다.
 
-이 단계에서만 케이스 파일 밖(설정 파일, tsconfig, `.gitignore`)을 고친다.
+이 단계에서만 PR 폴더 밖(설정 파일, tsconfig, `.gitignore`)을 고친다.
 
 ## 할 일
 
-1. 바뀐 파일 중 **화면에 그려지는 것**(컴포넌트, 페이지)을 고른다. 리뷰할 대상은 최대 3개.
+1. 바뀐 파일 중 **화면에 그려지는 것**(컴포넌트, 페이지)을 고른다. 리뷰할 대상은 최대 3개이고, 대상마다 탭이 하나 생긴다.
    - 바뀐 가장 작은 단위를 고른다. 바뀐 것이 카드(위젯)면 카드를, 페이지 파일 자체가 바뀌었으면 페이지를 대상으로 한다. 카드를 쓰는 페이지는 `impacts`에 넣는다.
    - 훅·유틸·스타일만 바뀐 PR이면 그 훅이나 유틸을 쓰는 가장 가까운 컴포넌트를 고른다.
    - 컴포넌트와 그 입력을 만드는 유틸이 함께 바뀌었으면 유틸의 입력을 케이스 props로 받아 `render`에서 변환해 넘긴다(예: 초 → `formatDuration(seconds)` → `<Chip>`).
    - 한 대상이 다른 대상을 품으면(예: 안내 컴포넌트의 그림 자리에 새 애니메이션) 품는 쪽 케이스에서 같이 보여 주고, 품기는 쪽은 props가 있을 때만 따로 만든다.
 2. `review.config.ts`를 읽어 `alias`, `casesDir`, `wrapper`, `mockHandlers`를 확인한다. 대상 파일, 그 파일이 쓰는 타입, API 응답 타입(DTO), API 경로 상수, 라우트 상수를 직접 읽는다. 추측으로 props나 경로를 쓰지 않는다. 파일은 Read·Grep·Glob 도구로 읽는다.
-3. PR 본문과 커밋을 읽는다: `gh pr view <번호> --json body,commits`(`--json` 없이 부르면 오류가 날 수 있다). 본문의 외부 링크는 열지 않는다. **본문과 최종 diff가 다르면 diff를 따른다.**
-4. 케이스 파일을 쓴다.
-   - 대상이 하나면 `review/cases/<PR번호>.tsx`, 여럿이면 대상마다 `review/cases/<PR번호>-<이름>.tsx`. `<이름>`은 컴포넌트 이름의 kebab-case다(`IllustratedMessage` → `368-illustrated-message.tsx`). 이 이름이 빌드 인자와 결과 HTML 이름이 된다.
-   - 형식은 `${CLAUDE_SKILL_DIR}/example-component.tsx`(컴포넌트)와 `${CLAUDE_SKILL_DIR}/example-page.tsx`(페이지+네트워크)를 따른다. import 경로와 타입은 이 프로젝트 것을 쓴다.
+3. PR 본문과 커밋을 읽는다: `gh pr view <번호> --json title,body,commits`(`--json` 없이 부르면 오류가 날 수 있다). 본문의 외부 링크는 열지 않는다. **본문과 최종 diff가 다르면 diff를 따른다.**
+4. PR 폴더 `review/cases/<PR번호>/`에 파일을 쓴다. 폴더 이름이 빌드 인자와 결과 HTML 이름(`review-<PR번호>.html`)이 된다.
+   - `pr.ts`: PR 개요. 아래 'PR 개요' 규칙과 `${CLAUDE_SKILL_DIR}/example-pr.ts`를 따른다.
+   - 대상마다 케이스 파일 `<이름>.tsx`. `<이름>`은 컴포넌트 이름의 kebab-case다(`IllustratedMessage` → `illustrated-message.tsx`). 탭은 파일 이름 순서이므로, 리뷰어가 먼저 봐야 할 대상이 뒤로 가면 `1-`, `2-`를 앞에 붙인다.
+   - 케이스 형식은 `${CLAUDE_SKILL_DIR}/example-component.tsx`(컴포넌트)와 `${CLAUDE_SKILL_DIR}/example-page.tsx`(페이지+네트워크)를 따른다. import 경로와 타입은 이 프로젝트 것을 쓴다. 폴더가 한 단계 깊으므로 상대 경로 import에 주의한다.
 5. 영향 범위를 찾는다: `bash ${CLAUDE_SKILL_DIR}/scripts/find-impacts.sh <파일>...`. 넘길 파일은 대상 파일과 PR에서 바뀐 공용 모듈(다른 곳에서도 import하는 훅·유틸·컴포넌트)이다. 이름만 보고 찾으므로 결과를 훑어 관계없는 파일, 테스트(`test`·`spec`·`__test__`), 목(`mock`), 스토리는 빼고 `impacts`에 넣는다.
 6. 아래 '검증'을 통과시킨다.
 
-**케이스 파일 밖은 고치지 않는다.** `src/`, `review.config.ts`, wrapper, `package.json`을 고쳐야 빌드된다고 판단되면 고치지 말고 이유와 함께 사용자에게 묻는다.
+**PR 폴더 밖은 고치지 않는다.** `src/`, `review.config.ts`, wrapper, `package.json`을 고쳐야 빌드된다고 판단되면 고치지 말고 이유와 함께 사용자에게 묻는다.
 
 ## 케이스 규칙
 
@@ -63,7 +66,7 @@ allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git l
 - `title`: 컴포넌트나 화면 이름. 결과 HTML과 아티팩트 제목이 된다.
 - 이미지: 코드에서 `import`한 SVG·PNG·GIF는 빌드가 HTML 안에 넣으므로 그대로 써도 된다. 목 데이터 속 원격 이미지 URL은 아티팩트가 막으므로 빈 문자열이나 `data:` URI로 둔다.
 - 라우트 경로도 프로젝트에 라우트 상수가 있으면 import해서 쓴다.
-- `window.confirm`·`alert`·`window.open`은 아티팩트에서 동작하지 않는다. `prefers-reduced-motion` 같은 미디어 쿼리와 OS 설정은 props로 바꿀 수 없다. 대상이 이것에 기대면 `decisions`가 아니라 '끝나면' 보고의 "확인할 수 없는 동작"에 적는다.
+- `window.confirm`·`alert`·`window.open`은 아티팩트에서 동작하지 않는다. `prefers-reduced-motion` 같은 미디어 쿼리와 OS 설정은 props로 바꿀 수 없다. 대상이 이것에 기대면 `pr.ts`가 아니라 '끝나면' 보고의 "확인할 수 없는 동작"에 적는다.
 
 ### 프리셋 (엣지 케이스)
 
@@ -92,23 +95,33 @@ allowed-tools: Bash(gh pr view *) Bash(gh pr diff *) Bash(git diff *) Bash(git l
 - body는 API 응답 타입(DTO)으로 `satisfies` 검사한다. 타입이 없으면 대상 코드가 읽는 필드만 넣는다. 에러 body는 프로젝트에 에러 응답 타입이 있으면 그것을, 없으면 `{ message: "서버 오류" }`를 쓴다.
 - `initialPath`: 페이지가 URL 파라미터를 읽으면 실제 라우트와 같은 경로로 두고, `render`에서 `<Routes><Route path="..." element={<Page />} /></Routes>`로 감싼다.
 
-### decisions, impacts
+### impacts
 
-- `decisions`: PR 작성자가 내린 결정. **최대 5개, 한 문장씩**. diff와 PR 본문, 커밋 메시지에서 근거가 있는 것만 쓴다. 본문과 diff가 다르면 diff를 따른다. 5개가 넘으면 리뷰어가 동의 여부를 판단해야 하는 것(동작·구조·접근성)을 먼저 고른다. 코드가 하는 일을 풀어 쓴 설명 글은 넣지 않는다. 근거가 없으면 빈 배열.
 - `impacts`: '할 일' 5번 스크립트 결과에서 관계있는 파일만. 없으면 빈 배열.
+
+## PR 개요 (pr.ts)
+
+`definePr({ title, summary, changes, decisions, reviewPoints })`를 default export한다. 리뷰어가 플레이그라운드를 열기 전에 읽는 글이다. 모든 항목은 diff·PR 본문·커밋에서 근거가 있는 것만 쓰고, 본문과 diff가 다르면 diff를 따른다. 문장은 완결된 한 문장으로 쓴다.
+
+- `title`: PR 제목 그대로.
+- `summary`: 무엇을 왜 바꿨는지 한두 문장. 리뷰어가 이것만 읽어도 PR의 목적을 안다.
+- `changes`: 바뀐 점, **최대 5개**. 파일 목록이 아니라 동작·화면 단위로 쓴다(예: "Stepper가 첫 단계에서 이전 버튼을 비활성화한다."). 대상 탭에서 확인할 수 있는 것은 그 대상 이름을 넣는다.
+- `decisions`: PR 작성자가 내린 결정, **최대 5개**. 5개가 넘으면 리뷰어가 동의 여부를 판단해야 하는 것(동작·구조·접근성)을 먼저 고른다. 코드가 하는 일을 풀어 쓴 설명은 `changes`에 두고 여기 넣지 않는다. 근거가 없으면 빈 배열.
+- `reviewPoints`: 리뷰어가 특히 봐 주길 바라는 곳, **최대 3개**. PR 본문에 적힌 질문, 엣지 케이스 프리셋이 드러내는 모양, 영향 범위가 넓은 공용 모듈 변경처럼 판단이 필요한 곳을 고른다. 확인할 수 있는 프리셋·시나리오 이름이 있으면 같이 적는다. 없으면 빈 배열.
 
 ## 검증
 
-순서대로 돌리고, 하나라도 실패하면 오류를 읽고 **케이스 파일만** 고친 뒤 1번부터 다시 한다. 세 번 실패하면 멈추고 마지막 오류와 시도한 수정을 보고한다.
+순서대로 돌리고, 하나라도 실패하면 오류를 읽고 **PR 폴더 파일만** 고친 뒤 1번부터 다시 한다. 세 번 실패하면 멈추고 마지막 오류와 시도한 수정을 보고한다.
 
-1. `npx tsc --noEmit` — 케이스 파일의 오류가 없어야 한다. 케이스와 무관한 기존 오류는 무시하고 보고에만 적는다. tsconfig `include`가 `review/`를 덮지 않아(`./**/*.tsx` 같은 넓은 glob은 덮는다) 케이스가 검사되지 않으면 그 사실을 보고에 적는다.
-2. `node ${CLAUDE_SKILL_DIR}/src/cli.ts build <케이스 이름>` — 케이스마다. 케이스 이름은 확장자를 뺀 파일 이름이고, 결과는 `outDir`의 `review-<케이스 이름>.html`. 빌드가 성공하면 경고는 고치지 않고, 케이스 파일을 가리키는 경고만 보고에 적는다.
-3. `node ${CLAUDE_SKILL_DIR}/scripts/smoke.mjs <결과 HTML>...` — 첫 화면, 프리셋, 시나리오를 하나씩 눌러 렌더링 오류·콘솔 오류·외부 요청을 확인하고 누른 개수를 출력한다. 개수가 케이스의 프리셋·시나리오 수와 같은지 본다. "경고 목 없는 요청"이 나오면 그 요청을 시나리오에 넣는다. playwright가 없다고 나오면 건너뛰고 보고에 적는다.
+1. `npx tsc --noEmit` — PR 폴더 파일의 오류가 없어야 한다. 케이스와 무관한 기존 오류는 무시하고 보고에만 적는다. tsconfig `include`가 `review/`를 덮지 않아(`./**/*.tsx` 같은 넓은 glob은 덮는다) 케이스가 검사되지 않으면 그 사실을 보고에 적는다.
+2. `node ${CLAUDE_SKILL_DIR}/src/cli.ts build <PR번호>` — PR 폴더 하나를 빌드한다. 결과는 `outDir`의 `review-<PR번호>.html` 하나다. 빌드가 성공하면 경고는 고치지 않고, PR 폴더 파일을 가리키는 경고만 보고에 적는다.
+3. `node ${CLAUDE_SKILL_DIR}/scripts/smoke.mjs <결과 HTML>` — 첫 화면(개요)을 확인하고, 대상 탭마다 프리셋·시나리오를 하나씩 눌러 렌더링 오류·콘솔 오류·외부 요청을 확인한 뒤 탭마다 누른 개수를 출력한다. 개수가 각 케이스의 프리셋·시나리오 수와 같은지 본다. "경고 목 없는 요청"이 나오면 그 요청을 시나리오에 넣는다. playwright가 없다고 나오면 건너뛰고 보고에 적는다.
 
 ## 끝나면
 
 사용자에게 짧게 알린다.
-- 만든 케이스 파일과 결과 HTML 경로, 크기(16MB를 넘으면 아티팩트에 올릴 수 없다)
-- 프리셋·시나리오 이름 목록, 넣지 못한 엣지 케이스와 이유
+- 만든 PR 폴더 파일과 결과 HTML 경로, 크기(16MB를 넘으면 아티팩트에 올릴 수 없다)
+- 개요의 `summary` 한 줄
+- 대상 탭별 프리셋·시나리오 이름 목록, 넣지 못한 엣지 케이스와 이유
 - 확인할 수 없는 동작(미디어 쿼리, `confirm`, 기록되지 않는 클릭 등)
 - 사용자가 원하면 결과 HTML을 Artifact 도구로 게시한다. 게시 직후에는 비공개이므로 리뷰어가 열려면 아티팩트 페이지의 Share 메뉴에서 공유해야 한다고 알린다.

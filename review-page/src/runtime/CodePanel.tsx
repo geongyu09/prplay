@@ -1,15 +1,14 @@
 import { useRef, useState } from "react";
-import type { SourceFile } from "virtual:review-sources";
+import type { SourceFile } from "virtual:review-cases";
 
 import { Code } from "./Highlight";
 
-// 코드 패널 (plan.md 8). 탭: 소스 전체, PR diff, 결정 목록, 영향 범위
-type Tab = "source" | "diff" | "decisions" | "impacts";
+// 코드 패널 (plan.md 8). 탭: 소스 전체, PR diff, 영향 범위. 결정 목록은 개요 탭에 있다 (3.4)
+type Tab = "source" | "diff" | "impacts";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "source", label: "소스" },
   { id: "diff", label: "diff" },
-  { id: "decisions", label: "결정" },
   { id: "impacts", label: "영향 범위" },
 ];
 
@@ -17,11 +16,10 @@ type Props = {
   files: SourceFile[];
   sha: string;
   base: string;
-  decisions: string[];
   impacts: string[];
 };
 
-export function CodePanel({ files, sha, base, decisions, impacts }: Props) {
+export function CodePanel({ files, sha, base, impacts }: Props) {
   const [tab, setTab] = useState<Tab>("source");
   const [fileIndex, setFileIndex] = useState(0);
   const file = files[fileIndex];
@@ -85,20 +83,9 @@ export function CodePanel({ files, sha, base, decisions, impacts }: Props) {
           <p className="rv-empty">케이스에 sources가 없습니다.</p>
         ))}
 
-      {tab === "decisions" &&
-        (decisions.length > 0 ? (
-          <ol className="rv-decisions">
-            {decisions.slice(0, 5).map((d) => (
-              <li key={d}>{d}</li>
-            ))}
-          </ol>
-        ) : (
-          <p className="rv-empty">적힌 결정이 없습니다.</p>
-        ))}
-
       {tab === "impacts" &&
         (impacts.length > 0 ? (
-          <ul className="rv-decisions">
+          <ul className="rv-list">
             {impacts.map((p) => (
               <li key={p}>
                 <code>{p}</code>

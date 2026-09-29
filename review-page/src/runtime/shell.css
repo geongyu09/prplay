@@ -24,6 +24,7 @@
 }
 
 .rv-header,
+.rv-overview,
 .rv-toolbar,
 .rv-address,
 .rv-code,
@@ -40,15 +41,58 @@
   font-weight: 700;
 }
 
-.rv-sources {
+.rv-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.rv-title-link:hover {
+  text-decoration: underline;
+}
+
+/* 맨 위 탭: 개요와 대상들 (plan.md 3.4) */
+.rv-page-tabs {
+  margin-top: 8px;
+  overflow-x: auto;
+}
+
+.rv-page-tabs .rv-tab {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* 개요 탭 (plan.md 3.4) */
+.rv-overview {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  margin: 4px 0 0;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 760px;
+}
+
+.rv-summary {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.rv-overview .rv-list li + li {
+  margin-top: 4px;
+}
+
+.rv-cases {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
   padding: 0;
   list-style: none;
-  color: var(--rv-muted);
-  font-size: 12px;
+}
+
+.rv-cases li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .rv-body {
@@ -268,7 +312,7 @@
   overflow-wrap: anywhere;
 }
 
-.rv-decisions {
+.rv-list {
   margin: 0;
   padding-left: 18px;
 }

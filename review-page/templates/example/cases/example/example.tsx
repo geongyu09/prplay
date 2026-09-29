@@ -1,7 +1,7 @@
-// /review-page 처음 설정(init)이 만든 예시 케이스. `node .claude/skills/review-page/src/cli.ts build example`로 빌드한다
+// /review-page 처음 설정(init)이 만든 예시 PR 폴더의 케이스. `node .claude/skills/review-page/src/cli.ts build example`로 빌드한다
 import { defineCase } from "review-kit";
 
-import Example from "../Example";
+import Example from "../../Example";
 
 export default defineCase({
   title: "Example",
@@ -14,6 +14,5 @@ export default defineCase({
     "큰 숫자": { count: 999 },
     비활성: { disabled: true },
   },
-  decisions: ["예시 케이스다."],
   impacts: [],
 });

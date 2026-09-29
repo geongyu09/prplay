@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { PropMeta } from "virtual:review-props";
+import type { PropMeta } from "virtual:review-cases";
 
 type Props = {
   values: Record<string, unknown>;

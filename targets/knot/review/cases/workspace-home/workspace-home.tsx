@@ -85,6 +85,5 @@ export default defineCase({
       route("POST", INVITATIONS, serverError, 500),
     ],
   },
-  decisions: [],
   impacts: [],
 });

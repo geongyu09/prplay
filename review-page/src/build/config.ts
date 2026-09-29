@@ -48,14 +48,10 @@ export async function loadConfig(cwd = process.cwd()): Promise<ResolvedConfig> {
   };
 }
 
-// 케이스 인자는 파일 경로나 casesDir 안의 이름(365, 365.tsx)을 받는다
-export function resolveCase(config: ResolvedConfig, arg: string) {
-  const candidates = [
-    path.resolve(arg),
-    path.join(config.casesDir, arg),
-    path.join(config.casesDir, `${arg}.tsx`),
-  ];
-  const found = candidates.find((p) => fs.existsSync(p) && fs.statSync(p).isFile());
-  if (!found) throw new Error(`케이스를 찾지 못했습니다: ${arg} (${config.casesDir})`);
+// PR 폴더 인자는 폴더 경로나 casesDir 안의 이름(365)을 받는다 (plan.md 3.4)
+export function resolvePrDir(config: ResolvedConfig, arg: string) {
+  const candidates = [path.resolve(arg), path.join(config.casesDir, arg)];
+  const found = candidates.find((p) => fs.existsSync(p) && fs.statSync(p).isDirectory());
+  if (!found) throw new Error(`PR 폴더를 찾지 못했습니다: ${arg} (${config.casesDir})`);
   return found;
 }

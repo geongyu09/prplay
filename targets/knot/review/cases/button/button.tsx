@@ -30,11 +30,6 @@ export default defineCase({
       label: "워크스페이스에 연결된 노션 페이지를 모두 다시 불러오기",
     },
   },
-  decisions: [
-    "로딩이면 disabled도 함께 걸고, 둘 다 참이면 로딩 모양을 그린다.",
-    "로딩 중에도 라벨을 opacity 0으로 남겨 너비와 스크린리더 이름을 유지한다.",
-    "높이는 height가 아니라 padding으로 만든다.",
-  ],
   impacts: [
     "src/modules/features/auth/GithubLoginButton/index.tsx",
     "src/modules/features/workspace/WorkspaceCreateButton/index.tsx",

@@ -1,4 +1,4 @@
-// init: 설정 파일과 예시 케이스를 현재 폴더에 만든다 (plan.md 11.1). 스킬의 처음 설정 단계가 부른다
+// init: 설정 파일과 예시 PR 폴더를 현재 폴더에 만든다 (plan.md 11.1). 스킬의 처음 설정 단계가 부른다
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -82,6 +82,6 @@ ${missing.length > 0 ? `- 설치: ${missing.join(" ")} (리뷰 화면이 프로�
     review/dist/
     ${skillDir}/node_modules/
 - review.config.ts를 프로젝트에 맞게 채운다 (alias, jsxImportSource, sharedPackages 등)
-- 예시 빌드: ${cli} build example → review/dist/review-example.html
+- 예시 빌드: ${cli} build example → review/dist/review-example.html (review/cases/example/ 폴더 하나가 HTML 하나)
 - PR 케이스 만들기: Claude Code에서 /review-page`);
 }
