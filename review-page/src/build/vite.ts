@@ -127,6 +127,18 @@ function readSize(root: string, base: string) {
   };
 }
 
+type SourceFile = { path: string; code: string; diff: string; url?: string };
+
+// 모듈 이동으로 함께 넣는 파일 확장자 (plan.md 8)
+const LINKABLE = /\.(tsx?|jsx?|mjs|cjs|css)$/;
+
+// import·export from·동적 import의 경로 문자열 (plan.md 8)
+function importSpecs(code: string) {
+  const specs = [...code.matchAll(/\b(?:import|export)\s+(?:type\s+)?(?:[\w*{}\s,$]+?\s+from\s+)?(["'])([^"'\n]+)\1/g)].map((m) => m[2]);
+  const dynamic = [...code.matchAll(/\bimport\(\s*(["'])([^"'\n]+)\1\s*\)/g)].map((m) => m[2]);
+  return [...specs, ...dynamic];
+}
+
 // PR 폴더의 케이스 파일 목록. pr.ts를 뺀 *.tsx를 파일 이름 순서로 (plan.md 3.4)
 export function listCaseFiles(prDir: string) {
   return fs
@@ -143,7 +155,7 @@ function casesModule(prDir: string, config: ResolvedConfig, meta: { pr: string; 
   return {
     name: "review-cases",
     resolveId: (source) => (source === id ? "\0" + id : null),
-    load(resolved) {
+    async load(resolved) {
       if (resolved !== "\0" + id) return null;
       const watch = (file: string) => this.addWatchFile(file);
       const { root, repoUrl } = config;
@@ -151,20 +163,49 @@ function casesModule(prDir: string, config: ResolvedConfig, meta: { pr: string; 
       const sha = git(root, ["rev-parse", "HEAD"])?.trim() ?? "";
       // 설정 폴더가 git 루트가 아니면(Knot의 frontend/) GitHub 경로 앞에 붙인다
       const prefix = git(root, ["rev-parse", "--show-prefix"])?.trim() ?? "";
-      const readFiles = (casePath: string) =>
-        readSources(casePath).map((p) => {
-          const file = path.join(root, p);
-          watch(file);
-          return {
-            path: p,
-            code: fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "",
-            diff: git(root, ["diff", `${base}...HEAD`, "--", p]) ?? "",
-            url: repoUrl && sha ? `${repoUrl.replace(/\/$/, "")}/blob/${sha}/${prefix}${p}` : undefined,
-          };
-        });
+      const readFile = (p: string) => {
+        const file = path.join(root, p);
+        watch(file);
+        return {
+          path: p,
+          code: fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "",
+          diff: git(root, ["diff", `${base}...HEAD`, "--", p]) ?? "",
+          url: repoUrl && sha ? `${repoUrl.replace(/\/$/, "")}/blob/${sha}/${prefix}${p}` : undefined,
+        };
+      };
+      // 모듈 이동(plan.md 8): import 경로 문자열을 설정 폴더 기준 경로로 푼다. 넣지 않는 파일은 null
+      const resolveImport = async (spec: string, importer: string) => {
+        const resolved = await this.resolve(spec, path.join(root, importer));
+        const file = resolved?.id.split("?")[0];
+        if (!file || file.startsWith("\0") || file.includes("/node_modules/")) return null;
+        if (!LINKABLE.test(file) || !fs.existsSync(file)) return null;
+        const rel = path.relative(root, file);
+        return rel.startsWith("..") || path.isAbsolute(rel) ? null : rel.split(path.sep).join("/");
+      };
+      const withImports = async (files: SourceFile[], keep?: Set<string>) =>
+        Promise.all(
+          files.map(async (f) => {
+            const imports: Record<string, string> = {};
+            for (const spec of new Set(importSpecs(f.code))) {
+              const target = await resolveImport(spec, f.path);
+              if (target && (!keep || keep.has(target))) imports[spec] = target;
+            }
+            return { ...f, imports };
+          }),
+        );
+      const readFiles = async (casePath: string) => {
+        const sources = readSources(casePath);
+        const files = await withImports(sources.map(readFile));
+        const linkedPaths = [...new Set(files.flatMap((f) => Object.values(f.imports)))].filter(
+          (p) => !sources.includes(p),
+        );
+        const all = new Set([...sources, ...linkedPaths]);
+        return { files, linked: await withImports(linkedPaths.map(readFile), all) };
+      };
 
       const prFile = path.join(prDir, "pr.ts");
       const cases = listCaseFiles(prDir);
+      const sourceSets = await Promise.all(cases.map(readFiles));
       const lines = [
         fs.existsSync(prFile) ? `export { default as pr } from ${JSON.stringify(prFile)};` : "export const pr = null;",
         ...cases.map((f, i) => `import c${i} from ${JSON.stringify(f)};`),
@@ -172,7 +213,7 @@ function casesModule(prDir: string, config: ResolvedConfig, meta: { pr: string; 
         `export default [${cases
           .map(
             (f, i) =>
-              `{ name: ${JSON.stringify(caseName(f))}, case: c${i}, props: ${JSON.stringify(readProps(f, root, watch))}, files: ${JSON.stringify(readFiles(f))} }`,
+              `{ name: ${JSON.stringify(caseName(f))}, case: c${i}, props: ${JSON.stringify(readProps(f, root, watch))}, files: ${JSON.stringify(sourceSets[i].files)}, linked: ${JSON.stringify(sourceSets[i].linked)} }`,
           )
           .join(",\n")}];`,
       ];

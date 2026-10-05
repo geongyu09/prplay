@@ -42,7 +42,7 @@ export function startMocking(
 
   interceptor.on("request", async ({ request, controller }) => {
     const startedAt = performance.now();
-    // 외부 요청은 어차피 막혀 있으므로, 빠진 목을 화면에서 알 수 있게 501과 요청 주소를 돌려준다
+    // 외부 요청은 어차피 막혀 있으므로, 빠진 목을 화면에서 알 수 있게 501과 요청 URL을 돌려준다
     let source: RequestRecord["source"] = "scenario";
     let response = await getResponse(toHandlers(getRoutes()), request);
     if (!response && fallbackHandlers.length > 0) {

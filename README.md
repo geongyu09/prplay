@@ -5,10 +5,10 @@ PR 설명과, PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 �
 결과 화면 (PR 하나에 HTML 하나. 맨 위 탭 `[개요] [대상 1] [대상 2] ...`)
 - 개요 탭: AI가 정리한 PR 설명. 좋은 리뷰에 필요한 7가지 순서다: 맥락(왜), 길잡이(어디부터), 증거(테스트·CI), 직접 만져 보기, 크기(줄 수·커밋), 위험과 영향 범위, 리뷰 방법(must/nit/question)
 - 대상 탭: 리뷰 대상(컴포넌트·페이지)마다 아래 플레이그라운드
-- 미리보기: 실제 컴포넌트·페이지가 렌더링된다. 폭 슬라이더, 페이지는 주소 표시줄
+- 미리보기: 실제 컴포넌트·페이지가 렌더링된다. 폭 슬라이더, 페이지는 URL 표시줄
 - props 편집: 타입에서 자동으로 만든 컨트롤, 엣지 케이스 프리셋, 함수 props 호출 기록
 - 네트워크 목: 시나리오(정상·빈 상태·로딩·500 에러) 전환, 응답 JSON·상태 코드·지연 편집, 요청 기록
-- 코드 패널: 소스(문법 강조), PR diff, 커밋 SHA 기준 GitHub 링크, 영향 범위
+- 코드 패널: 소스(문법 강조, 모듈 이동, VS Code식 코드 접기), PR diff, 커밋 SHA 기준 GitHub 링크, 영향 범위
 - 편집 상태는 브라우저에 저장되고 JSON 복사/붙여넣기로 다른 리뷰어에게 넘긴다
 
 역할 분담: 틀(리뷰 화면, 모킹 엔진, 빌드)은 스킬 폴더에 들어 있고, PR마다 바뀌는 **PR 폴더**(`pr.ts`와 케이스 파일)는 AI(`/review-page` 스킬)가 쓴다. npm 패키지로 배포하지 않고 스킬 폴더 하나(`review-page/`)를 복사해서 쓴다(plan.md 11장).
@@ -67,7 +67,7 @@ export default defineConfig({
   jsxImportSource: "@emotion/react",        // 기본 "react"
   define: { "process.env.API_BASE_URL": JSON.stringify("") },
   sharedPackages: ["@emotion/react", "@tanstack/react-query", "react-router"], // 프로젝트 node_modules에서 가져올 패키지
-  styles: ["./review/fonts.css"],           // 미리보기에 넣을 CSS(폰트 @font-face 등). 번들에 인라인된다
+  styles: ["./review/preview.css"],        // 미리보기에 넣을 CSS. 번들에 인라인된다. 폰트 파일은 넣지 않는다
   wrapper: "./review/Wrapper.tsx",          // Provider 묶음
   mockHandlers: "./src/mocks/handlers.ts",  // 기존 MSW 핸들러. 시나리오에 없는 요청에 쓴다
   casesDir: "./review/cases",
@@ -78,7 +78,7 @@ export default defineConfig({
 ```
 
 - `sharedPackages`: Context를 쓰는 라이브러리(CSS-in-JS, 라우터, 서버 상태)는 리뷰 화면과 컴포넌트가 같은 인스턴스를 써야 한다. `react`, `react-dom`, `msw`는 항상 포함된다.
-- `wrapper`: `({ initialPath, address, children }: WrapperProps) => ReactNode`를 default export한다. 라우터는 `MemoryRouter`를 쓴다(단일 HTML에서는 History API 라우팅이 안 된다). `QueryClient`는 `useState`로 만들고 `retry: false`로 둔다. 주소 표시줄을 쓰려면 라우터 안에서 `address.report`, `address.connect`를 연결한다 (plan.md 4.1 예시).
+- `wrapper`: `({ initialPath, address, children }: WrapperProps) => ReactNode`를 default export한다. 라우터는 `MemoryRouter`를 쓴다(단일 HTML에서는 History API 라우팅이 안 된다). `QueryClient`는 `useState`로 만들고 `retry: false`로 둔다. URL 표시줄을 쓰려면 라우터 안에서 `address.report`, `address.connect`를 연결한다 (plan.md 4.1 예시).
 
 ## PR 폴더
 
@@ -100,7 +100,14 @@ export default definePr({
   summary: "문서 화면 상단의 경로 Breadcrumb과 문서 넘기기 Stepper를 공용 컴포넌트로 추가한다.",
   context: {                                        // 1. 맥락
     problem: ["문서 위치를 보여 줄 방법이 없었다."],
-    decisions: [{ choice: "Breadcrumb은 링크 없이 div로 그린다.", why: "표시 전용이다." }],
+    decisions: [
+      {
+        question: "경로 표시가 '문서'라는 말을 알아야 하나?",
+        choice: "모른다. 위 단계 이름은 쓰는 화면이 넘겨 준다.",
+        why: "다른 화면에서도 같은 Breadcrumb을 쓰기 위해서다.",
+        code: ["parent"],
+      },
+    ],
     scope: { does: ["Breadcrumb을 추가한다."], doesNot: [] },
   },
   guide: {                                          // 2. 길잡이
@@ -140,7 +147,7 @@ export default defineCase({
 
 | 명령 | 하는 일 |
 | --- | --- |
-| `build <PR 폴더>... [--pr 번호]` | PR 폴더마다 `outDir/review-<폴더 이름>.html` 단일 파일. 크기를 출력하고 14MB를 넘으면 경고 |
+| `build <PR 폴더>... [--pr 번호] [--no-shots]` | PR 폴더마다 `outDir/review-<폴더 이름>.html` 단일 파일. 크기를 출력하고 14MB를 넘으면 경고. 프로젝트에 playwright가 있으면 대상 미리보기를 찍어 개요에 넣는다(`--no-shots`면 건너뜀) |
 | `dev <PR 폴더> [--port 5173]` | 같은 설정의 Vite dev 서버(HMR). 케이스를 쓰는 동안 확인용 |
 | `init [--force]` | 위 '처음 설정' 참고 |
 
@@ -155,7 +162,7 @@ Claude Code에서 PR 브랜치를 체크아웃하고 설정 파일 폴더에서:
 /review-page 371      # 번호 지정
 ```
 
-스킬은 PR 본문·커밋·diff를 읽어 `review/cases/<PR번호>/`에 `pr.ts`(개요)와, 바뀐 컴포넌트·페이지마다 케이스 파일(최대 3개)을 쓴다. `tsc` → `build` → 스모크 테스트를 통과할 때까지 PR 폴더 파일만 고친다(3번 실패하면 멈춘다). `src/`는 고치지 않는다.
+스킬은 PR 본문·커밋·diff를 읽어 `review/cases/<PR번호>/`에 `pr.ts`(개요)와, 바뀐 컴포넌트·페이지마다 케이스 파일(최대 9개)을 쓴다. `tsc` → `build` → 스모크 테스트를 통과할 때까지 PR 폴더 파일만 고친다(3번 실패하면 멈춘다). `src/`는 고치지 않는다.
 
 스킬 폴더의 스크립트는 따로 써도 된다.
 - `bash .claude/skills/review-page/scripts/find-impacts.sh <파일>...`: 그 파일을 import하는 다른 파일
@@ -172,7 +179,8 @@ Claude Code에서 PR 브랜치를 체크아웃하고 설정 파일 폴더에서:
 
 | 제약 | 그래서 |
 | --- | --- |
-| HTML 파일 하나, 16MB 이하(`data:` URI 포함) | JS·CSS·폰트·이미지·SVG를 모두 파일 안에 넣는다 |
+| HTML 파일 하나, 16MB 이하(`data:` URI 포함) | JS·CSS·이미지·SVG를 모두 파일 안에 넣는다 |
+| 인라인한 폰트 파일(`data:font/*`)이 있으면 공개 공유 불가 | 폰트는 넣지 않는다. 미리보기는 시스템 글꼴로 보인다 |
 | Service Worker 등록 불가 | MSW 브라우저 모드 대신 `@mswjs/interceptors`로 fetch·XHR을 가로챈다 |
 | 외부 요청(API, 이미지, CSS) 차단 | 실제 API는 호출할 수 없다. 목 데이터의 원격 이미지 URL은 깨진다 |
 | `#key=value` hash·쿼리 문자열이 전달되지 않음 | 상태를 URL로 공유하지 않고 JSON 복사/붙여넣기로 넘긴다 |

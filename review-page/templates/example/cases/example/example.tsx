@@ -14,5 +14,7 @@ export default defineCase({
     "큰 숫자": { count: 999 },
     비활성: { disabled: true },
   },
+  // count는 누른 횟수라 0 이상 정수만 받는다
+  controls: { count: { min: 0, max: 999, step: 1 } },
   impacts: [],
 });

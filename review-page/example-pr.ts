@@ -7,16 +7,20 @@ export default definePr({
   context: {
     problem: ["문서 위치를 보여 주거나 여러 문서를 넘겨 볼 방법이 없었다."],
     basics: ["primitives 컴포넌트는 props만 그리고, 상태는 쓰는 화면이 들고 있다."],
+    // 질문과 답은 코드 이름 없이 쓰고, 코드 이름은 code에만 모은다
     decisions: [
       {
-        choice: "\"문서\"를 박아 두지 않고 parent prop으로 받는다.",
-        why: "문서가 아닌 화면에서도 같은 Breadcrumb을 쓰기 위해서다.",
+        question: "여러 문서를 넘길 때 지금 몇 번째 문서인지는 누가 기억하나?",
+        choice: "문서 화면이 기억하고, Stepper는 이전이나 다음 버튼이 눌렸다는 것만 화면에 알린다.",
+        why: "공용 컴포넌트는 상태 없이 받은 값만 그린다는 규칙을 따르고, 순서를 쓰는 화면의 다른 부분과 한 곳에서 맞추기 위해서다.",
+        code: ["current", "total", "onPrev", "onNext"],
       },
       {
-        choice: "Breadcrumb은 표시 전용이라 링크 없이 div로 그린다.",
-        why: "이번 화면에서는 위 단계로 이동하는 동작이 없다.",
+        question: "경로 표시가 '문서'라는 말을 알아야 하나?",
+        choice: "모른다. 위 단계 이름을 쓰는 화면이 넘겨 주고, Breadcrumb은 받은 두 이름을 그리기만 한다.",
+        why: "문서가 아닌 화면에서도 같은 Breadcrumb을 쓰기 위해서다.",
+        code: ["parent"],
       },
-      { choice: "Stepper의 current는 1부터 센다.", why: "화면에 보이는 `2 / 3`과 값을 맞추기 위해서다." },
     ],
     scope: {
       does: ["Breadcrumb과 Stepper 공용 컴포넌트를 추가한다."],
@@ -24,7 +28,7 @@ export default definePr({
     },
   },
   intuition: {
-    idea: "두 컴포넌트는 그리기만 하고, 순서나 제목 같은 상태는 화면이 든다.",
+    idea: "두 컴포넌트가 상태 없이 받은 값만 그리므로, 어느 화면에 붙여도 같은 모양과 동작으로 쓸 수 있다.",
     examples: [
       {
         kind: "compare",
@@ -66,21 +70,45 @@ export default definePr({
     readingOrder: [
       {
         role: "core",
-        title: "Stepper가 버튼 막힘을 계산한다",
+        title: "문서 화면이 순서를 들고 Stepper는 그리기만 한다",
         files: ["src/shared/components/primitives/ui/Stepper/index.tsx"],
-        explain: "Stepper는 current와 total로 양 끝인지 계산해 버튼을 막고, 순서 변경은 onPrev, onNext로 화면에 넘긴다.",
-        snippet: `const isFirst = current <= 1;
-const isLast = current >= total;`,
+        explain:
+          "Stepper는 문서 화면이 여러 문서를 넘길 때 쓰는 공용 컴포넌트라, 화면에 보이는 `2 / 3`과 맞추려고 1부터 세는 `current`와 `onPrev`, `onNext` 콜백 모양이 Stepper를 쓸 화면들과의 약속이 된다.",
+        snippet: `interface StepperProps {
+  /** 지금 보고 있는 순서. 화면에 그대로 보여주므로 1부터 세요. */
+  current: number;
+  /** 전체 개수 */
+  total: number;
+  /** 이전 버튼을 눌렀을 때 실행할 동작 */
+  onPrev: () => void;
+  /** 다음 버튼을 눌렀을 때 실행할 동작 */
+  onNext: () => void;
+}`,
       },
       {
         role: "core",
-        title: "Breadcrumb이 지금 항목만 줄인다",
+        title: "Breadcrumb은 위 단계 이름을 화면에서 받는다",
         files: ["src/shared/components/primitives/ui/Breadcrumb/index.tsx"],
-        explain: "바깥 상자에 min-width: 0을 줘서 긴 제목이 줄을 넓히지 않고 지금 항목만 말줄임되게 한다.",
-        snippet: `const Container = styled.div\`
-  max-width: 100%;
-  min-width: 0;
-\`;`,
+        explain:
+          "Breadcrumb은 문서 화면 위쪽에서 지금 문서가 어디에 속하는지 보여 주는데, 이동 동작 없이 표시만 해서 링크 없이 `div`로 그린다. 나중에 위 단계로 가는 링크가 필요해지면 props와 태그를 함께 바꿔야 한다.",
+        snippet: `interface BreadcrumbProps {
+  /** 위 단계 이름. 문서 화면에서는 \`문서\`예요. */
+  parent: string;
+  /** 지금 보고 있는 항목 이름. 길면 한 줄에서 말줄임해요. */
+  current: string;
+}`,
+      },
+      {
+        role: "side",
+        title: "양 끝 버튼 막기와 긴 제목 말줄임",
+        files: [
+          "src/shared/components/primitives/ui/Stepper/index.tsx",
+          "src/shared/components/primitives/ui/Breadcrumb/index.tsx",
+        ],
+        explain:
+          "Stepper는 첫 문서와 마지막 문서에서 버튼을 막고, Breadcrumb은 바깥 상자에 `min-width: 0`을 줘서 긴 제목이 옆 버튼을 밀지 않게 한다.",
+        snippet: `const isFirst = current <= 1;
+const isLast = current >= total;`,
       },
     ],
     focus: [

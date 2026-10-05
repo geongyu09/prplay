@@ -64,9 +64,6 @@ ${exports}
     },
   },
 
-  // index.html의 CDN 폰트 대신 인라인한다 (plan.md 2.3)
-  styles: ["./review/fonts.css"],
-
   wrapper: "./review/Wrapper.tsx",
   // 시나리오에 없는 요청은 Knot의 기존 MSW 핸들러가 응답한다 (plan.md 6.1)
   mockHandlers: "./src/shared/api/mock/handlers/index.ts",

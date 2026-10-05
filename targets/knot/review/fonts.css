@@ -1,8 +1,0 @@
-/* Knot index.html은 Pretendard를 jsDelivr CDN으로 불러온다. 아티팩트에서는 외부 요청이 막히므로 패키지의 파일을 인라인한다 (plan.md 2.3) */
-@font-face {
-  font-family: "Pretendard Variable";
-  font-weight: 45 920;
-  font-style: normal;
-  font-display: swap;
-  src: url("pretendard/dist/web/variable/woff2/PretendardVariable.woff2") format("woff2-variations");
-}

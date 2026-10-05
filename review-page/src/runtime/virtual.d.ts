@@ -10,10 +10,15 @@ declare module "virtual:review-cases" {
     required?: boolean;
     description?: string;
     raw?: string;
+    // 케이스 controls에서 온다 (plan.md 5.1)
+    min?: number;
+    max?: number;
+    step?: number;
   };
 
   // plan.md 3.3. git을 못 쓰면 diff가 비고, repoUrl이 없으면 url이 없다
-  export type SourceFile = { path: string; code: string; diff: string; url?: string };
+  // imports: import 경로 문자열 → 함께 넣은 파일의 path (plan.md 8 모듈 이동)
+  export type SourceFile = { path: string; code: string; diff: string; url?: string; imports: Record<string, string> };
 
   export type CaseEntry = {
     // 확장자를 뺀 케이스 파일 이름. 저장 키에 쓴다 (plan.md 7)
@@ -21,6 +26,8 @@ declare module "virtual:review-cases" {
     case: ReviewCase<any>;
     props: Record<string, PropMeta>;
     files: SourceFile[];
+    // sources가 import하는 파일. 모듈 이동으로만 연다 (plan.md 8)
+    linked: SourceFile[];
   };
 
   // pr.ts. 없으면 null

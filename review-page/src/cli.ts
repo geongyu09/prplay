@@ -11,7 +11,8 @@ import { pathToFileURL } from "node:url";
 const kitRoot = path.resolve(import.meta.dirname, "..");
 
 const USAGE = `사용법 (node <스킬 폴더>/src/cli.ts <명령>)
-  build <PR 폴더>... [--pr 번호]   PR 폴더마다 단일 HTML 빌드
+  build <PR 폴더>... [--pr 번호] [--no-shots]
+                                   PR 폴더마다 단일 HTML 빌드. --no-shots면 개요 화면 사진을 찍지 않는다
   dev <PR 폴더> [--port 5173]       dev 서버(HMR)
   init [--force]                   설정 파일과 예시 PR 폴더 만들기
 PR 폴더는 폴더 경로나 casesDir 안의 이름(예: 366)`;
@@ -54,11 +55,13 @@ async function main() {
   const { loadConfig, resolvePrDir } = await import("./build/config.ts");
   if (command === "build") {
     const pr = takeOption(args, "--pr");
+    const noShots = args.indexOf("--no-shots");
+    if (noShots >= 0) args.splice(noShots, 1);
     if (args.length === 0) throw new Error(USAGE);
     const { buildPr } = await import("./build/build.ts");
     const config = await loadConfig();
     fs.mkdirSync(config.outDir, { recursive: true });
-    for (const arg of args) await buildPr(config, resolvePrDir(config, arg), pr);
+    for (const arg of args) await buildPr(config, resolvePrDir(config, arg), pr, noShots < 0);
     return;
   }
   const port = takeOption(args, "--port");

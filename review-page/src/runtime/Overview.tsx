@@ -1,11 +1,12 @@
-import type { PrCodeStep, PrDecision, PrEvidence, PrLink, PrRevision, PrRisk, ReviewPr } from "review-kit";
+import type { PrCodeStep, PrDecision, PrDiagram, PrEvidence, PrExample, PrLink, PrRevision, PrRisk, ReviewPr } from "review-kit";
 import type { ReactNode } from "react";
 import type { CaseEntry } from "virtual:review-cases";
 import { meta } from "virtual:review-cases";
 import { Code } from "./Highlight";
+import type { CaseStart } from "./Playground";
 
 // 개요 탭 (plan.md 3.4). 좋은 리뷰에 필요한 7가지 순서:
-// 요약(+리뷰 반영) → 1 맥락 → 2 길잡이 → 3 증거 → 4 직접 만져 보기 → 5 크기 → 6 위험과 영향 범위 → 7 리뷰 방법
+// 요약(+화면 사진, 리뷰 반영) → 1 맥락 → 2 길잡이 → 3 증거 → 4 직접 만져 보기 → 5 크기 → 6 위험과 영향 범위 → 7 리뷰 방법
 export function Overview({
   pr,
   cases,
@@ -13,12 +14,15 @@ export function Overview({
 }: {
   pr: ReviewPr;
   cases: CaseEntry[];
-  onOpen: (name: string) => void;
+  onOpen: (name: string, start?: CaseStart) => void;
 }) {
   const { context, guide, evidence, risk } = pr;
   return (
     <div className="rv-overview">
-      <p className="rv-summary">{pr.summary}</p>
+      <p className="rv-summary">
+        <Inline text={pr.summary} />
+      </p>
+      {shots.length > 0 && <ShotsSection cases={cases} onOpen={onOpen} />}
       {pr.revisions && pr.revisions.length > 0 && <RevisionSection revisions={pr.revisions} />}
 
       <Section title="1. 맥락: 왜 바꿨나">
@@ -41,7 +45,9 @@ export function Overview({
         </Sub>
         {pr.intuition && (
           <Sub title="핵심 아이디어">
-            <p className="rv-idea">{pr.intuition.idea}</p>
+            <p className="rv-idea">
+              <Inline text={pr.intuition.idea} />
+            </p>
             {pr.intuition.examples.slice(0, 2).map((example) => (
               <Figure key={example.caption} example={example} />
             ))}
@@ -62,7 +68,7 @@ export function Overview({
         </Sub>
         {guide.readingOrder.length > 0 && (
           <Sub title="읽는 순서">
-            <ReadingOrder steps={guide.readingOrder} />
+            <ReadingOrder steps={guide.readingOrder} cases={cases} onOpen={onOpen} />
           </Sub>
         )}
         <div className="rv-grid">
@@ -152,9 +158,28 @@ function List({ items, max, empty = "해당 없음" }: { items: string[]; max: n
   return (
     <ul className="rv-list">
       {items.slice(0, max).map((item) => (
-        <li key={item}>{item}</li>
+        <li key={item}>
+          <Inline text={item} />
+        </li>
       ))}
     </ul>
+  );
+}
+
+// 백틱으로 감싼 부분만 인라인 코드로 보여 준다. 다른 마크다운은 해석하지 않는다 (plan.md 3.4)
+function Inline({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/`([^`]+)`/).map((part, i) =>
+        i % 2 === 1 ? (
+          <code key={i} className="rv-inline-code">
+            {part}
+          </code>
+        ) : (
+          part
+        ),
+      )}
+    </>
   );
 }
 
@@ -171,7 +196,9 @@ function Paragraphs({ items }: { items: string[] }) {
   return (
     <div className="rv-prose">
       {items.map((item) => (
-        <p key={item}>{item}</p>
+        <p key={item}>
+          <Inline text={item} />
+        </p>
       ))}
     </div>
   );
@@ -186,6 +213,75 @@ function Links({ links }: { links: PrLink[] }) {
         </a>
       ))}
     </p>
+  );
+}
+
+// build가 결과 HTML에 끼워 넣은 화면 사진 (plan.md 3.4). 없거나 읽을 수 없으면 빈 배열
+type Shot = {
+  case: string;
+  state: string;
+  kind: "default" | "preset" | "scenario";
+  src: string;
+  width: number;
+  height: number;
+};
+
+const shots: Shot[] = (() => {
+  try {
+    const parsed: unknown = JSON.parse(document.getElementById("review-shots")?.textContent ?? "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (s): s is Shot =>
+        !!s &&
+        typeof s.case === "string" &&
+        typeof s.state === "string" &&
+        ["default", "preset", "scenario"].includes(s.kind) &&
+        typeof s.src === "string" &&
+        s.src.startsWith("data:image/") &&
+        typeof s.width === "number" &&
+        typeof s.height === "number",
+    );
+  } catch {
+    return [];
+  }
+})();
+
+// 사진을 누르면 그 대상 탭을 그 상태로 연다
+function ShotsSection({ cases, onOpen }: { cases: CaseEntry[]; onOpen: (name: string, start?: CaseStart) => void }) {
+  const titles = new Map(cases.map((entry) => [entry.name, entry.case.title]));
+  return (
+    <section className="rv-section">
+      <h2>화면</h2>
+      <div className="rv-shots">
+        {shots
+          .filter((shot) => titles.has(shot.case))
+          .map((shot) => (
+            <button
+              key={`${shot.case}:${shot.kind}:${shot.state}`}
+              type="button"
+              className="rv-shot"
+              onClick={() =>
+                onOpen(
+                  shot.case,
+                  shot.kind === "preset" ? { preset: shot.state } : shot.kind === "scenario" ? { scenario: shot.state } : undefined,
+                )
+              }
+            >
+              {/* 찍힌 크기 그대로, 칸보다 넓으면 줄인다 */}
+              <img
+                src={shot.src}
+                width={shot.width}
+                height={shot.height}
+                alt={`${titles.get(shot.case)} · ${shot.state}`}
+                loading="lazy"
+              />
+              <span className="rv-shot-caption">
+                {titles.get(shot.case)} · {shot.state}
+              </span>
+            </button>
+          ))}
+      </div>
+    </section>
   );
 }
 
@@ -223,18 +319,43 @@ function Decisions({ decisions }: { decisions: PrDecision[] }) {
   if (decisions.length === 0) return <p className="rv-empty">적힌 결정이 없습니다.</p>;
   return (
     <ol className="rv-list rv-decisions">
-      {decisions.slice(0, 5).map((d) => (
-        <li key={d.choice}>
-          <strong>{d.choice}</strong>
-          <span className="rv-note">이유: {d.why}</span>
-          {d.rejected && <span className="rv-note">버린 대안: {d.rejected}</span>}
+      {decisions.slice(0, 3).map((d) => (
+        <li key={d.question}>
+          <strong>
+            <Inline text={d.question} />
+          </strong>
+          <span>
+            <Inline text={d.choice} />
+          </span>
+          <span className="rv-note">이유: <Inline text={d.why} /></span>
+          {d.rejected && <span className="rv-note">버린 대안: <Inline text={d.rejected} /></span>}
+          {d.code && d.code.length > 0 && (
+            <span className="rv-note rv-decision-code">
+              코드:{" "}
+              {d.code.slice(0, 4).map((name, i) => (
+                <span key={name}>
+                  {i > 0 && ", "}
+                  <code>{name}</code>
+                </span>
+              ))}
+            </span>
+          )}
         </li>
       ))}
     </ol>
   );
 }
 
-function ReadingOrder({ steps }: { steps: PrCodeStep[] }) {
+// 단계 파일이 대상 sources에 있으면 그 대상 탭으로 가는 버튼을 단다 (plan.md 3.4)
+function ReadingOrder({
+  steps,
+  cases,
+  onOpen,
+}: {
+  steps: PrCodeStep[];
+  cases: CaseEntry[];
+  onOpen: (name: string) => void;
+}) {
   return (
     <ol className="rv-walk">
       {steps.slice(0, 5).map((step) => (
@@ -242,13 +363,29 @@ function ReadingOrder({ steps }: { steps: PrCodeStep[] }) {
           <span className={step.role === "core" ? "rv-badge rv-badge-core" : "rv-badge"}>
             {step.role === "core" ? "핵심" : "부수"}
           </span>
-          <strong>{step.title}</strong>
+          <strong>
+            <Inline text={step.title} />
+          </strong>
+          {cases
+            .filter((entry) => entry.case.sources.some((source) => step.files.includes(source)))
+            .map((entry) => (
+              <button
+                key={entry.name}
+                type="button"
+                className="rv-button rv-button-small rv-walk-open"
+                onClick={() => onOpen(entry.name)}
+              >
+                플레이그라운드에서 보기: {entry.case.title} →
+              </button>
+            ))}
           {step.files.map((file) => (
             <code key={file} className="rv-note rv-walk-file">
               {file}
             </code>
           ))}
-          <p>{step.explain}</p>
+          <p>
+            <Inline text={step.explain} />
+          </p>
           {step.snippet && <Code code={step.snippet} path={step.files[0] ?? ""} />}
         </li>
       ))}
@@ -268,7 +405,7 @@ function EvidenceSection({ evidence }: { evidence: PrEvidence }) {
           <ul className="rv-list">
             {evidence.tests.slice(0, 5).map((t) => (
               <li key={t.file}>
-                <code>{t.file}</code> {t.guarantees}
+                <code>{t.file}</code> <Inline text={t.guarantees} />
               </li>
             ))}
           </ul>
@@ -319,7 +456,11 @@ function SizeSection({ size }: { size?: string }) {
         <p className="rv-empty">비교 기준과의 차이를 읽지 못했습니다.</p>
       )}
       {large && <p className="rv-warn">{LARGE_LINES}줄이 넘습니다. 커밋 단위로 나눠 읽어 주세요.</p>}
-      {size && <p>{size}</p>}
+      {size && (
+        <p>
+          <Inline text={size} />
+        </p>
+      )}
       {commits.length > 0 && (
         <ol className="rv-commits">
           {commits.map((c) => (
@@ -359,7 +500,9 @@ function Figure({ example }: { example: PrExample }) {
         <ol className="rv-flow">
           {example.steps.slice(0, 5).map((step, i) => (
             <li key={i} className="rv-flow-step">
-              <span className="rv-flow-label">{step.label}</span>
+              <span className="rv-flow-label">
+                <Inline text={step.label} />
+              </span>
               {step.data && <code className="rv-flow-data">{step.data}</code>}
             </li>
           ))}
@@ -368,13 +511,17 @@ function Figure({ example }: { example: PrExample }) {
         <div className="rv-compare">
           {[example.before, example.after].map((side, i) => (
             <div key={i} className={i === 0 ? "rv-side rv-side-before" : "rv-side rv-side-after"}>
-              <span className="rv-side-label">{side.label}</span>
+              <span className="rv-side-label">
+                <Inline text={side.label} />
+              </span>
               <pre className="rv-side-data">{side.data}</pre>
             </div>
           ))}
         </div>
       )}
-      <figcaption>{example.caption}</figcaption>
+      <figcaption>
+        <Inline text={example.caption} />
+      </figcaption>
     </figure>
   );
 }
@@ -388,7 +535,9 @@ function DiagramFigure({ diagram }: { diagram: PrDiagram }) {
       ) : (
         <p className="rv-empty">그림을 그릴 수 없습니다.</p>
       )}
-      <figcaption>{diagram.caption}</figcaption>
+      <figcaption>
+        <Inline text={diagram.caption} />
+      </figcaption>
     </figure>
   );
 }

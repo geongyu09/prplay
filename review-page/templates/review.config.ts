@@ -18,6 +18,9 @@ export default defineConfig({
   // react, react-dom, msw는 항상 포함된다
   // sharedPackages: ["@tanstack/react-query", "react-router"],
 
+  // 미리보기에 넣을 CSS 파일. 폰트 파일(@font-face)은 아티팩트 공개 공유를 막으므로 넣지 않는다
+  // styles: ["./review/preview.css"],
+
   // Provider 묶음 컴포넌트 파일. ({ initialPath, address, children }) => ReactNode를 default export한다
   // wrapper: "./review/Wrapper.tsx",
 

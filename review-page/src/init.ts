@@ -6,7 +6,7 @@ import path from "node:path";
 
 const templates = path.resolve(import.meta.dirname, "../templates");
 
-// git remote가 GitHub면 https 주소로 바꾼다. 아니면 빈 문자열
+// git remote가 GitHub면 https URL로 바꾼다. 아니면 빈 문자열
 function githubUrl(cwd: string) {
   try {
     const remote = execFileSync("git", ["remote", "get-url", "origin"], {

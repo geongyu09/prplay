@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Actions, MockRoute, ReviewAddress } from "review-kit";
 import type { CaseEntry } from "virtual:review-cases";
@@ -14,6 +14,7 @@ import { requestLog } from "./mock/requestStore";
 import { ScenarioPanel } from "./mock/ScenarioPanel";
 import { CodePanel } from "./CodePanel";
 import { ErrorBoundary, Providers } from "./Preview";
+import { Split } from "./Split";
 
 type PropValues = Record<string, unknown>;
 type Scenarios = Record<string, MockRoute[]>;
@@ -76,13 +77,20 @@ function prepare(entry: CaseEntry) {
   };
 }
 
-// 탭을 열 때 부른다. 그 케이스의 첫 시나리오(편집한 값 포함)를 적용하고 요청 기록을 비운다 (plan.md 3.4)
+// 개요 화면 사진을 눌러 열 때 시작할 상태 (plan.md 3.4). 프리셋을 적용하거나 시나리오를 고른 채로 연다
+export type CaseStart = { preset?: string; scenario?: string };
+
+// 탭을 열 때 부른다. 그 케이스의 첫 시나리오(start가 있으면 그 시나리오, 편집한 값 포함)를 적용하고 요청 기록을 비운다 (plan.md 3.4)
 // 미리보기가 첫 요청을 보내기 전에 라우트가 바뀌어 있어야 하므로 마운트 전에 부른다
-export function activateCase(entry: CaseEntry) {
+export function activateCase(entry: CaseEntry, start?: CaseStart) {
   const p = prepare(entry);
-  mock.routes = p.mergeScenarios(p.storage.load().scenarios)[p.scenarioNames[0]] ?? [];
+  const name = startScenario(p.scenarioNames, start);
+  mock.routes = p.mergeScenarios(p.storage.load().scenarios)[name] ?? [];
   requestLog.clear();
 }
+
+const startScenario = (names: string[], start?: CaseStart) =>
+  start?.scenario && names.includes(start.scenario) ? start.scenario : (names[0] ?? "");
 
 // 함수 값은 JSON으로 저장하지 않는다
 const serializable = (props: PropValues) =>
@@ -90,20 +98,45 @@ const serializable = (props: PropValues) =>
 
 const MAX_CALLS = 100;
 const MIN_WIDTH = 240;
-const MAX_WIDTH = 1280;
 
-export function Playground({ entry, previewEl }: { entry: CaseEntry; previewEl: HTMLElement }) {
+export function Playground({
+  entry,
+  previewEl,
+  start,
+}: {
+  entry: CaseEntry;
+  previewEl: HTMLElement;
+  start?: CaseStart;
+}) {
   const p = useMemo(() => prepare(entry), [entry]);
   const { c, defaults, presets, baseScenarios, scenarioNames, storage } = p;
   const propsMeta = entry.props;
 
-  const [props, setPropsState] = useState<PropValues>(() => p.mergeProps(storage.load().props));
+  // 프리셋으로 시작하면 프리셋 버튼을 누른 것과 같다 (plan.md 3.4)
+  const startPreset = start?.preset && start.preset in presets ? presets[start.preset] : null;
+  const [props, setPropsState] = useState<PropValues>(() =>
+    startPreset ? { ...defaults, ...startPreset } : p.mergeProps(storage.load().props),
+  );
+  useEffect(() => {
+    if (startPreset) storage.save({ ...storage.load(), props: serializable({ ...defaults, ...startPreset }) });
+  }, []);
   // props가 바뀔 때마다 미리보기 전체를 다시 마운트한다 (plan.md 4.2). QueryClient도 새로 만들어진다
   const [renderKey, setRenderKey] = useState(0);
   const [calls, setCalls] = useState<ActionCall[]>([]);
   const [width, setWidth] = useState<number | null>(null);
+  // "가득"은 미리보기 영역의 실제 좌우 폭이다. 슬라이더 최댓값도 이 폭을 따른다 (plan.md 4.3)
+  const stageRef = useRef<HTMLElement>(null);
+  const [stageWidth, setStageWidth] = useState(MIN_WIDTH);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => setStageWidth(Math.max(MIN_WIDTH, Math.floor(entry.contentRect.width))));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const shownWidth = width === null ? stageWidth : Math.min(width, stageWidth);
   const [scenarios, setScenariosState] = useState<Scenarios>(() => p.mergeScenarios(storage.load().scenarios));
-  const [activeScenario, setActiveScenario] = useState(scenarioNames[0] ?? "");
+  const [activeScenario, setActiveScenario] = useState(() => startScenario(scenarioNames, start));
 
   // 라우트를 바꾸고 요청 기록을 비운 뒤 다시 마운트한다. 새 QueryClient가 만들어져 이전 캐시가 남지 않는다 (plan.md 4.2)
   const applyRoutes = useCallback((routes: MockRoute[]) => {
@@ -122,7 +155,7 @@ export function Playground({ entry, previewEl }: { entry: CaseEntry; previewEl: 
   );
   const callId = useRef(0);
 
-  // 주소 표시줄 (plan.md 4.1). 다시 마운트할 때는 보고 있던 주소에서 시작한다
+  // URL 표시줄 (plan.md 4.1). 다시 마운트할 때는 보고 있던 URL에서 시작한다
   const [address, setAddress] = useState<string | null>(null);
   const currentPath = useRef<string | undefined>(undefined);
   const navigateRef = useRef<((path: string) => void) | null>(null);
@@ -179,147 +212,160 @@ export function Playground({ entry, previewEl }: { entry: CaseEntry; previewEl: 
   );
 
   return (
-    <div className="rv-body">
-      <section className="rv-stage" aria-label="미리보기">
-        {address !== null && (
-          <AddressBar
-            address={address}
-            initialPath={c.initialPath ?? "/"}
-            onNavigate={(path) => navigateRef.current?.(path)}
-          />
-        )}
-        <div className="rv-toolbar">
-          <label className="rv-width">
-            <span>폭</span>
-            <input
-              type="range"
-              min={MIN_WIDTH}
-              max={MAX_WIDTH}
-              step={10}
-              value={width ?? MAX_WIDTH}
-              onChange={(e) => setWidth(Number(e.target.value))}
-            />
-            <output>{width === null ? "가득" : `${width}px`}</output>
-          </label>
-          {width !== null && (
-            <button type="button" className="rv-button rv-button-small" onClick={() => setWidth(null)}>
-              가득
-            </button>
-          )}
-        </div>
-        <div className="rv-frame" style={{ width: width === null ? "100%" : `${width}px` }}>
-          <slot name="preview" />
-        </div>
-        {/* 결정 목록은 PR 단위라 개요 탭에 있다 (plan.md 3.4, 8) */}
-        <CodePanel files={entry.files} sha={meta.sha} base={meta.base} impacts={c.impacts ?? []} />
-      </section>
+    <>
+      {/* 코드와 미리보기·편집 패널을 좌우로 둔다. 자리와 폭은 끌어서 바꾼다 (plan.md 3.4) */}
+      <Split
+        code={
+          /* 결정 목록은 PR 단위라 개요 탭에 있다 (plan.md 3.4, 8) */
+          <CodePanel files={entry.files} linked={entry.linked} sha={meta.sha} base={meta.base} impacts={c.impacts ?? []} />
+        }
+        play={
+          <>
+            <section ref={stageRef} className="rv-stage" aria-label="미리보기">
+              {address !== null && (
+                <AddressBar
+                  address={address}
+                  initialPath={c.initialPath ?? "/"}
+                  onNavigate={(path) => navigateRef.current?.(path)}
+                />
+              )}
+              <div className="rv-toolbar">
+                <label className="rv-width">
+                  <span>폭</span>
+                  <input
+                    type="range"
+                    min={MIN_WIDTH}
+                    max={stageWidth}
+                    step={10}
+                    value={shownWidth}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      setWidth(next > stageWidth - 10 ? null : next);
+                    }}
+                  />
+                  <output>{`${shownWidth}px`}</output>
+                </label>
+                {width !== null && (
+                  <button type="button" className="rv-button rv-button-small" onClick={() => setWidth(null)}>
+                    가득
+                  </button>
+                )}
+              </div>
+              <div className="rv-frame" style={{ width: width === null ? "100%" : `${shownWidth}px` }}>
+                <slot name="preview" />
+              </div>
+            </section>
 
-      <aside className="rv-panel">
-        <section className="rv-section">
-          <h2>Props</h2>
-          <PropControls
-            values={props}
-            meta={propsMeta}
-            onChange={(name, value) => setProps({ ...props, [name]: value })}
-          />
-        </section>
+            <aside className="rv-panel">
+              <section className="rv-section">
+                <h2>Props</h2>
+                <PropControls
+                  values={props}
+                  meta={propsMeta}
+                  controls={c.controls ?? {}}
+                  onChange={(name, value) => setProps({ ...props, [name]: value })}
+                />
+              </section>
 
-        {presetNames.length > 0 && (
-          <section className="rv-section">
-            <h2>프리셋</h2>
-            <div className="rv-row">
-              {presetNames.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  className="rv-button"
-                  // 기본 props 위에 덮어쓴다 (plan.md 5.2)
-                  onClick={() => setProps({ ...defaults, ...presets[name] })}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+              {presetNames.length > 0 && (
+                <section className="rv-section">
+                  <h2>프리셋</h2>
+                  <div className="rv-row">
+                    {presetNames.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="rv-button"
+                        // 기본 props 위에 덮어쓴다 (plan.md 5.2)
+                        onClick={() => setProps({ ...defaults, ...presets[name] })}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
 
-        {hasFunctionProps && (
-          <section className="rv-section">
-            <h2>호출 기록</h2>
-            <ActionLog calls={calls} onClear={() => setCalls([])} />
-          </section>
-        )}
+              {hasFunctionProps && (
+                <section className="rv-section">
+                  <h2>호출 기록</h2>
+                  <ActionLog calls={calls} onClear={() => setCalls([])} />
+                </section>
+              )}
 
-        {scenarioNames.length > 0 && (
-          <section className="rv-section">
-            <h2>시나리오</h2>
-            <ScenarioPanel
-              names={scenarioNames}
-              active={activeScenario}
-              routes={scenarios[activeScenario]}
-              isEdited={
-                JSON.stringify(scenarios[activeScenario]) !== JSON.stringify(baseScenarios[activeScenario])
-              }
-              onSelect={(name) => {
-                setActiveScenario(name);
-                applyRoutes(scenarios[name]);
-              }}
-              onApply={(routes) => {
-                setScenarios({ ...scenarios, [activeScenario]: routes });
-                applyRoutes(routes);
-              }}
-              onRestore={() => {
-                // 편집 칸도 다시 채워지도록 새 배열로 넘긴다
-                const routes = [...baseScenarios[activeScenario]];
-                setScenarios({ ...scenarios, [activeScenario]: routes });
-                applyRoutes(routes);
-              }}
-            />
-          </section>
-        )}
+              {scenarioNames.length > 0 && (
+                <section className="rv-section">
+                  <h2>시나리오</h2>
+                  <ScenarioPanel
+                    names={scenarioNames}
+                    active={activeScenario}
+                    routes={scenarios[activeScenario]}
+                    isEdited={
+                      JSON.stringify(scenarios[activeScenario]) !== JSON.stringify(baseScenarios[activeScenario])
+                    }
+                    onSelect={(name) => {
+                      setActiveScenario(name);
+                      applyRoutes(scenarios[name]);
+                    }}
+                    onApply={(routes) => {
+                      setScenarios({ ...scenarios, [activeScenario]: routes });
+                      applyRoutes(routes);
+                    }}
+                    onRestore={() => {
+                      // 편집 칸도 다시 채워지도록 새 배열로 넘긴다
+                      const routes = [...baseScenarios[activeScenario]];
+                      setScenarios({ ...scenarios, [activeScenario]: routes });
+                      applyRoutes(routes);
+                    }}
+                  />
+                </section>
+              )}
 
-        <section className="rv-section">
-          <h2>요청 기록</h2>
-          <RequestLog />
-        </section>
+              <section className="rv-section">
+                <h2>요청 기록</h2>
+                <RequestLog />
+              </section>
 
-        <section className="rv-section">
-          <h2>편집 상태</h2>
-          <StatePanel
-            getJson={() =>
-              JSON.stringify({ props: serializable(props), scenarios: p.changedScenarios(scenarios) }, null, 2)
-            }
-            onApply={(json) => {
-              try {
-                const parsed = JSON.parse(json) as { props?: unknown; scenarios?: unknown };
-                if (!parsed || typeof parsed !== "object" || !("props" in parsed || "scenarios" in parsed)) {
-                  return '{"props": {...}, "scenarios": {...}} 형식이어야 합니다.';
-                }
-                // 붙여넣은 JSON에 있는 키만 바꾼다 (plan.md 7)
-                if ("scenarios" in parsed) {
-                  const next = p.mergeScenarios(parsed.scenarios);
-                  setScenarios(next);
-                  mock.routes = next[activeScenario] ?? [];
-                }
-                if ("props" in parsed) setProps(p.mergeProps(parsed.props));
-                else applyRoutes(mock.routes);
-                return null;
-              } catch (error) {
-                return (error as Error).message;
-              }
-            }}
-            onReset={() => {
-              storage.clear();
-              setPropsState({ ...defaults });
-              setScenariosState(baseScenarios);
-              setActiveScenario(scenarioNames[0] ?? "");
-              applyRoutes(baseScenarios[scenarioNames[0]] ?? []);
-            }}
-          />
-        </section>
-      </aside>
+              <section className="rv-section">
+                <h2>편집 상태</h2>
+                <StatePanel
+                  getJson={() =>
+                    JSON.stringify({ props: serializable(props), scenarios: p.changedScenarios(scenarios) }, null, 2)
+                  }
+                  onApply={(json) => {
+                    try {
+                      const parsed = JSON.parse(json) as { props?: unknown; scenarios?: unknown };
+                      if (!parsed || typeof parsed !== "object" || !("props" in parsed || "scenarios" in parsed)) {
+                        return '{"props": {...}, "scenarios": {...}} 형식이어야 합니다.';
+                      }
+                      // 붙여넣은 JSON에 있는 키만 바꾼다 (plan.md 7)
+                      if ("scenarios" in parsed) {
+                        const next = p.mergeScenarios(parsed.scenarios);
+                        setScenarios(next);
+                        mock.routes = next[activeScenario] ?? [];
+                      }
+                      if ("props" in parsed) setProps(p.mergeProps(parsed.props));
+                      else applyRoutes(mock.routes);
+                      return null;
+                    } catch (error) {
+                      return (error as Error).message;
+                    }
+                  }}
+                  onReset={() => {
+                    storage.clear();
+                    setPropsState({ ...defaults });
+                    setScenariosState(baseScenarios);
+                    setActiveScenario(scenarioNames[0] ?? "");
+                    applyRoutes(baseScenarios[scenarioNames[0]] ?? []);
+                  }}
+                />
+              </section>
+            </aside>
+          </>
+        }
+      />
 
       {createPortal(preview, previewEl)}
-    </div>
+    </>
   );
 }

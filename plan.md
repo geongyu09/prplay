@@ -14,7 +14,7 @@ PR 설명과, PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 �
 
 리뷰어가 링크 하나를 열면 아래 화면이 나온다. PR 하나에 HTML은 하나다(3.4).
 
-- 개요 탭: AI가 정리한 PR 설명을 보여준다. 요약, 배경, 핵심 아이디어와 예시, 구조 그림, 바뀐 점, 코드 흐름, 결정 목록, 리뷰 포인트, 플레이그라운드 목록 순서다. 처음 열면 이 탭이 보인다.
+- 개요 탭: AI가 정리한 PR 설명을 보여준다. 요약, 화면 사진, 배경, 핵심 아이디어와 예시, 구조 그림, 바뀐 점, 코드 흐름, 결정 목록, 리뷰 포인트, 플레이그라운드 목록 순서다. 처음 열면 이 탭이 보인다.
 - 대상 탭: 리뷰 대상(컴포넌트나 페이지)마다 탭이 하나씩 있고, 탭 안에 아래 플레이그라운드가 있다.
 - 미리보기: PR에서 바뀐 실제 컴포넌트나 페이지가 렌더링된다.
 - props 편집: 타입에 맞는 입력 컨트롤로 props를 바꾼다.
@@ -39,9 +39,9 @@ PR 설명과, PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 �
 
 | 항목 | 결과 | 설계에 주는 영향 |
 | --- | --- | --- |
-| 올릴 수 있는 형태 | HTML 파일 하나 | JS, CSS, 폰트, 이미지를 모두 파일 안에 넣어야 한다 |
+| 올릴 수 있는 형태 | HTML 파일 하나 | JS, CSS, 이미지를 모두 파일 안에 넣어야 한다. 폰트 파일은 넣지 않는다(1.1 표 '폰트 파일') |
 | Service Worker 등록 | 실패 (`sw.js`는 403, blob URL은 "protocol not supported") | MSW 브라우저 모드(`setupWorker`)를 쓸 수 없다 |
-| 외부 주소 `fetch` | `TypeError: Failed to fetch` | 실제 API 호출 불가, 외부 CDN 폰트나 이미지도 막힐 가능성이 높다 |
+| 외부 URL `fetch` | `TypeError: Failed to fetch` | 실제 API 호출 불가, 외부 CDN 폰트나 이미지도 막힐 가능성이 높다 |
 | 같은 origin `fetch` | 200 | 의미 있는 용도는 없다 |
 | `localStorage` | 동작 | 편집한 props와 목 데이터를 저장할 수 있다 |
 | Secure context | true | `crypto.randomUUID` 같은 API 사용 가능 |
@@ -53,8 +53,9 @@ PR 설명과, PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 �
 | 항목 | 결과 | 근거 | 설계에 주는 영향 |
 | --- | --- | --- | --- |
 | Claude Code에서 바로 게시 | 가능. Artifact 도구에 HTML 경로를 넘기면 `claude.ai/artifact/...` 링크가 나오고, 같은 경로로 다시 올리면 같은 링크가 갱신된다 | 게시 | 스킬 마지막 단계에서 수동 업로드 없이 게시할 수 있다(5단계) |
-| 파일 크기 상한 | 페이지 16MB. `data:` URI도 포함해서 센다. 12.6MB 파일 게시는 성공 | 게시 + 규칙 | 폰트는 쓰는 weight·글자만 넣고, 빌드 스크립트에서 크기를 출력해 16MB에 가까우면 경고한다(14MB 넘으면 경고, 16MB 넘으면 "아티팩트에 올릴 수 없음"을 알린다. 빌드는 실패시키지 않는다) |
-| 외부 이미지·CSS | 막힌다. 외부 스크립트는 cdnjs, jsdelivr 등 일부 CDN만, 외부 CSS는 Google Fonts만 허용되고 그 외 요청은 오류 없이 막힌다 | 규칙 | 지금 설계대로 폰트·이미지·SVG를 모두 파일 안에 넣는다. 원격 이미지 URL이 들어간 목 데이터는 화면에서 깨진다 |
+| 파일 크기 상한 | 페이지 16MB. `data:` URI도 포함해서 센다. 12.6MB 파일 게시는 성공 | 게시 + 규칙 | 빌드 스크립트에서 크기를 출력해 16MB에 가까우면 경고한다(14MB 넘으면 경고, 16MB 넘으면 "아티팩트에 올릴 수 없음"을 알린다. 빌드는 실패시키지 않는다) |
+| 외부 이미지·CSS | 막힌다. 외부 스크립트는 cdnjs, jsdelivr 등 일부 CDN만, 외부 CSS는 Google Fonts만 허용되고 그 외 요청은 오류 없이 막힌다 | 규칙 | 이미지·SVG를 모두 파일 안에 넣는다. CDN 폰트는 막히므로 미리보기는 시스템 글꼴로 보인다. 원격 이미지 URL이 들어간 목 데이터는 화면에서 깨진다 |
+| 폰트 파일(`data:font/*`) | 게시는 되지만 공개 공유가 막힌다. Share에서 "공개 공유를 위한 검토를 할 수 없는 파일 형식이 포함되어 있습니다"가 뜬다. Pretendard woff2를 인라인한 #452 페이지에서 확인(2026-10-04) | 게시 | 폰트 파일을 HTML에 넣지 않는다. 미리보기는 프로젝트 `font-family`의 대체 글꼴(시스템 글꼴)로 보인다. 빌드 결과에 `data:font/`가 있으면 경고한다(2026-10-04 사용자 결정) |
 | `data:`·`blob:` 자원 | 허용 | 규칙 | vite-plugin-singlefile의 base64 인라인 방식이 동작한다 |
 | 부모 URL hash 전달 | 영문·숫자·`.` `_` `~` `-`로만 된 `#anchor`만 전달된다. `#key=value`와 쿼리 문자열은 전달되지 않는다 | 규칙 | 편집 상태를 URL로 공유할 수 없다. 7장의 JSON 복사/붙여넣기가 유일한 공유 방법이다. `#code`처럼 탭을 고르는 용도로만 쓸 수 있다 |
 | `window.open` | 같은 조직의 일부 로그인 사용자에게만 동작하고 나머지는 `null`을 돌려준다 | 규칙 | 쓰지 않는다 |
@@ -77,7 +78,7 @@ PR 설명과, PR에서 바뀐 컴포넌트와 페이지를 리뷰어가 직접 �
 
 - Vite 빌드 결과의 JS와 CSS를 `index.html` 안에 인라인해서 파일 하나만 남긴다.
 - 진입점이 여러 개인 앱은 지원하지 않는다. 진입점은 하나로 두고, PR 폴더의 케이스 파일들은 가상 모듈 하나(`virtual:review-cases`)가 모두 import한다(3.4).
-- `public/` 폴더의 정적 파일은 인라인하지 않는다. 폰트와 이미지는 `import`로 가져와야 인라인된다.
+- `public/` 폴더의 정적 파일은 인라인하지 않는다. 이미지는 `import`로 가져와야 인라인된다.
 - SVG는 Vite가 직접 인라인하지 않으므로 svgr 같은 로더로 컴포넌트화해야 한다.
 - History API 기반 라우팅은 동작하지 않고 hash 라우팅이나 메모리 라우터를 써야 한다.
 
@@ -121,7 +122,7 @@ export async function buildCase(casePath: string, outDir: string) {
 ```
 
 주의할 점
-- `assetsInlineLimit`을 크게 잡아야 폰트와 이미지가 base64로 들어간다. 파일 크기가 커지므로 폰트는 쓰는 weight만 넣는다.
+- `assetsInlineLimit`을 크게 잡아야 이미지가 base64로 들어간다. 폰트 파일은 공개 공유를 막으므로 넣지 않는다(1.1 표).
 - `resolve.dedupe`에 React와 CSS-in-JS 라이브러리(Knot는 Emotion)를 넣지 않으면 인스턴스가 두 개 생겨서 hooks 오류나 테마 Context 누락이 생긴다.
 - vite-plugin-svgr 기본값은 `?react` 접미사가 붙은 import만 변환한다. 프로젝트가 `import Icon from './a.svg'` 형태를 쓰면 `include`와 `exportType`을 위처럼 바꿔야 하고, 이 옵션 이름은 사용하는 버전 문서에서 다시 확인한다. (vite-plugin-svgr 5.2 확인: `include`는 플러그인 옵션, `exportType`은 `svgrOptions` 안의 `@svgr/core` 옵션)
 - vite-plugin-svgr는 기본으로 svgo를 돌리지 않는다. webpack의 `@svgr/webpack`처럼 svgo까지 거치려면 `svgrOptions.plugins`에 `@svgr/plugin-svgo`, `@svgr/plugin-jsx`를 순서대로 넣는다.
@@ -134,7 +135,7 @@ Knot는 webpack과 svgr을 쓰므로 Vite 빌드에서 같은 결과가 나오�
 2. svgr 옵션을 webpack 설정과 맞춘다. Knot는 SVG의 `width`, `height`를 지우고 `size` prop으로 채우며 `aria-hidden="true"`를 붙이므로, 같은 svgr 옵션(svgo 플러그인, `svgProps`, `template` 등)을 Vite 쪽에도 넣는다.
 3. `process.env.*`를 쓰는 코드가 있으면 Vite의 `define`으로 채운다.
 4. CSS-in-JS의 JSX 설정(Knot는 Emotion의 `jsxImportSource: '@emotion/react'`)을 Vite의 `oxc.jsx.importSource`에 맞춘다.
-5. `index.html`에서 CDN으로 불러오는 폰트는 아티팩트에서 막힐 수 있으므로, npm 패키지의 폰트 파일을 `import`해서 인라인한다. 폰트 CSS는 프로젝트 쪽 파일로 두고 `review.config.ts`의 `styles`로 넣는다(11.2). 스킬은 폰트를 넣지 않는다.
+5. `index.html`에서 CDN으로 불러오는 폰트는 아티팩트에서 막히고, 폰트 파일을 인라인하면 공개 공유가 막힌다(1.1 표). 그래서 폰트는 넣지 않고 시스템 글꼴로 보여 준다. 스킬도 폰트 파일을 갖지 않는다(2026-10-04 사용자 결정).
 
 Knot에서 확인한 값 (2026-09-27, `frontend/` develop 기준)
 
@@ -150,7 +151,7 @@ Knot에서 확인한 값 (2026-09-27, `frontend/` develop 기준)
 | 서버 상태 | TanStack Query v5 | 4.2대로 시나리오마다 `new QueryClient()` |
 | 라우터 | react-router 8 `createBrowserRouter` | 미리보기는 `MemoryRouter` |
 | 전역 Provider | `ThemeProvider`(Emotion) + `GlobalStyle` + `QueryClientProvider` (`@provider/themeProvider`, `@provider/queryClient`) | 4.1 wrapper와 같다 |
-| 폰트 | `index.html`의 jsDelivr CDN `<link>`로 Pretendard Variable | 5번대로 인라인 필요. `review/fonts.css`(`pretendard` 패키지의 woff2 `@font-face`)를 `styles`로 넣고, `pretendard`는 Knot devDependency로 둔다(11.4) |
+| 폰트 | `index.html`의 jsDelivr CDN `<link>`로 Pretendard Variable | 5번대로 넣지 않는다. 미리보기는 Pretendard 대신 시스템 글꼴로 보인다(2026-10-04 사용자 결정) |
 | MSW | msw 2.15, 핸들러는 `@api/mock/handlers` | 6.1 `getResponse`로 재사용 |
 
 그 밖에
@@ -163,7 +164,7 @@ Knot에서 확인한 값 (2026-09-27, `frontend/` develop 기준)
 - 빌드: `pnpm review:build review/cases/365.tsx` → `review/dist/review-365.html`. `review/build.ts`는 Node 22의 타입 제거로 바로 실행한다. pnpm은 간접 의존성을 import할 수 없으므로 `vite`를 직접 devDependency로 둔다.
 - `review-kit` alias는 Knot tsconfig에 없으므로, 타입은 `review/shell/virtual.d.ts`의 ambient 선언으로 두고 런타임만 alias로 연결한다. 이렇게 해서 Knot `tsc --noEmit`이 그대로 통과한다.
 - svgr: webpack 옵션 그대로 옮긴 결과 Stepper 화살표 `width/height=14`, Breadcrumb 화살표 `12`, `aria-hidden="true"`, `focusable="false"`, `viewBox` 유지로 webpack 설정과 같다.
-- 폰트: `pretendard` 패키지의 `PretendardVariable.woff2`(2.0MB)를 인라인해서 HTML 하나가 약 2.9MB가 된다. 16MB 상한 안이지만, 크기를 줄이려면 쓰는 글자만 남기는 서브셋을 나중에 검토한다.
+- 폰트: `pretendard` 패키지의 `PretendardVariable.woff2`(2.0MB)를 인라인해서 HTML 하나가 약 2.9MB가 됐다. 이후 폰트 파일이 공개 공유를 막는 것을 확인해 폰트를 넣지 않게 바꿨다(2026-10-04, 1.1 표).
 
 대안으로 webpack에 `html-webpack-plugin`과 스크립트 인라인 플러그인을 붙여 기존 설정을 재사용하는 방법도 있다. 라이브러리로 뺄 생각이면 Vite 쪽이 설정 주입이 쉽다.
 
@@ -189,6 +190,7 @@ export type ReviewCase<P> = {
   render: (props: P, actions: Actions) => React.ReactNode; // 상태가 필요한 컴포넌트를 감싸는 자리. actions는 5.1
   props: P;                                // 기본 props
   presets?: Record<string, Partial<P>>;    // 엣지 케이스
+  controls?: Controls<P>;                  // 컨트롤의 범위·선택지 (5.1)
   scenarios?: Record<string, MockRoute[]>; // 네트워크 시나리오
   initialPath?: string;                    // 페이지 케이스의 시작 URL
   impacts?: string[];                      // 영향받는 다른 파일
@@ -215,14 +217,16 @@ export type PrContext = {
   problem: string[];       // 풀려는 문제와 바뀌기 전 모습. 최대 3문장
   links?: PrLink[];        // 관련 이슈·티켓
   basics?: string[];       // 처음 보는 사람을 위한 기존 구조 설명. 최대 4문장. 접혀 있다
-  decisions: PrDecision[]; // 이 방식을 고른 이유. 최대 5개
+  decisions: PrDecision[]; // 설계급 결정. 최대 3개
   scope: { does: string[]; doesNot: string[] }; // 이번에 하는 것, 일부러 하지 않은 것. 각 최대 3개
 };
 
 export type PrDecision = {
-  choice: string;    // 작성자가 고른 방식 한 문장
+  question: string;  // 이 결정이 답하는 질문. 기능 언어로, 코드 이름 없이 한 문장
+  choice: string;    // 작성자가 고른 답. 동작·구조 말로 한 문장
   why: string;       // 고른 이유(제약 포함) 한 문장
   rejected?: string; // 검토했다가 버린 대안과 버린 이유 한 문장
+  code?: string[];   // 이 결정이 드러나는 코드 이름(props·타입·함수). 최대 4개
 };
 
 export type PrIntuition = {
@@ -251,7 +255,7 @@ export type PrGuide = {
 };
 
 export type PrCodeStep = {
-  role: "core" | "side"; // 핵심 파일인지, 다른 변경에 따른 부수 수정인지
+  role: "core" | "side"; // core: 리뷰어가 판단할 약속·동작(props·타입·상태 위치·데이터 흐름), side: 구현 세부나 따라 고친 곳
   title: string;    // 이 묶음이 하는 일
   files: string[];  // 설정 파일 폴더 기준 경로
   explain: string;  // 1~3문장
@@ -278,6 +282,14 @@ export type PrRevision = {
 
 export type Actions = Record<string, (...args: unknown[]) => void>; // 함수 props 이름 → 호출 기록 로거
 
+// props 키마다 컨트롤을 좁힌다 (5.1). 값 타입이 props 타입에서 오므로 틀린 선택지·범위는 tsc가 잡는다
+export type Controls<P> = { [K in keyof P]?: PropControl<P[K]> };
+export type PropControl<T> = {
+  options?: readonly T[];  // 이 값들 중 하나만 고르는 셀렉트
+} & ([NonNullable<T>] extends [number]
+  ? { min?: number; max?: number; step?: number } // 숫자 범위. step이 정수면 정수만 받는다
+  : {});
+
 export const defineCase = <P,>(c: ReviewCase<P>) => c;
 export const definePr = (pr: ReviewPr) => pr;
 ```
@@ -296,6 +308,7 @@ export default defineCase({
   props: { total: 3 },
   render: ({ total }, actions) => <Harness total={total} actions={actions} />,
   presets: { '문서 1개': { total: 1 }, '문서 12개': { total: 12 } },
+  controls: { total: { min: 1, max: 20, step: 1 } },
   impacts: [],
 });
 
@@ -345,13 +358,14 @@ function sourcesModule(casePath: string): Plugin {
 
 - 케이스 파일은 TSX라서 Node에서 바로 `import`할 수 없다. `sources` 목록만 정규식이나 TypeScript AST로 읽거나, `tsx`/`jiti` 같은 로더를 쓴다.
 - GitHub 링크에 브랜치 이름 대신 커밋 SHA를 넣어야 PR이 머지되거나 수정돼도 링크가 같은 코드를 가리킨다. 줄 범위는 `#L10-L25`로 붙인다.
-- 구현(4.1): 저장소 주소와 비교 기준은 `review.config.ts`의 `repoUrl`, `baseBranch`(없으면 `origin/main`)를 쓴다. `sources`는 설정 파일 폴더 기준 경로이고, Knot처럼 설정 폴더가 git 루트가 아니면(`frontend/`) `git rev-parse --show-prefix`를 앞에 붙여 GitHub 경로를 만든다. `git`을 쓸 수 없거나 비교 기준이 없으면 diff와 SHA는 비우고 빌드는 계속한다. `repoUrl`이 없으면 링크를 만들지 않는다. 가상 모듈은 `{ sha, base, files: [{ path, code, diff, url }] }`이고, dev에서는 파일이 바뀌면 다시 읽는다.
+- 구현(4.1): 저장소 URL과 비교 기준은 `review.config.ts`의 `repoUrl`, `baseBranch`(없으면 `origin/main`)를 쓴다. `sources`는 설정 파일 폴더 기준 경로이고, Knot처럼 설정 폴더가 git 루트가 아니면(`frontend/`) `git rev-parse --show-prefix`를 앞에 붙여 GitHub 경로를 만든다. `git`을 쓸 수 없거나 비교 기준이 없으면 diff와 SHA는 비우고 빌드는 계속한다. `repoUrl`이 없으면 링크를 만들지 않는다. 가상 모듈은 `{ sha, base, files: [{ path, code, diff, url }] }`이고, dev에서는 파일이 바뀌면 다시 읽는다.
+- 모듈 이동(8장)을 위해 파일마다 `imports`(import 경로 문자열 → 함께 넣은 파일의 `path`)를 붙이고, 케이스마다 `sources`가 import하는 파일을 같은 모양으로 `linked`에 넣는다.
 
 ### 3.4 PR 폴더와 개요 (2026-09-29 변경, 사용자 결정)
 
 처음에는 케이스 파일 하나를 HTML 하나로 빌드해서 대상이 여럿인 PR은 HTML도 여럿이었고, 화면에는 플레이그라운드만 있었다. 지금은 **PR 하나를 HTML 하나**로 빌드하고 PR 설명을 같이 넣는다.
 
-- PR 폴더: `<casesDir>/<PR번호>/` 하나가 PR 하나다. 안에 `pr.ts`(개요)와 대상마다 케이스 파일 `<이름>.tsx`를 둔다. `<이름>`은 컴포넌트 이름의 kebab-case이고, 대상은 최대 3개다.
+- PR 폴더: `<casesDir>/<PR번호>/` 하나가 PR 하나다. 안에 `pr.ts`(개요)와 대상마다 케이스 파일 `<이름>.tsx`를 둔다. `<이름>`은 컴포넌트 이름의 kebab-case이고, 대상은 최대 9개다(2026-10-04 사용자 결정, 처음에는 3개였다).
 
   ```
   review/cases/366/
@@ -365,20 +379,32 @@ function sourcesModule(casePath: string): Plugin {
 - 가상 모듈 `virtual:review-cases`가 폴더의 케이스 파일을 모두 import하고, 케이스마다 docgen props(5.1)와 소스·diff(3.3)를 함께 내보낸다. `pr.ts`가 있으면 그것도 import한다. PR번호가 숫자이고 `repoUrl`이 있으면 PR 링크(`<repoUrl>/pull/<번호>`)도 만든다. 개요의 크기 섹션을 위해 비교 기준과의 `git diff --shortstat`(파일 수, 추가·삭제 줄 수)과 `git log`(커밋 SHA·제목, 오래된 것부터)도 `meta`에 넣는다. git을 쓸 수 없으면 비운다.
 - 화면 맨 위에 제목(`<title>`과 같은 `#PR번호 제목`, PR 링크가 있으면 링크)과 탭을 둔다: `[개요] [대상 1] [대상 2] ...`. 처음 열면 개요 탭이다. 탭이 하나뿐이면 탭 줄을 숨긴다.
   - 개요 탭: 리뷰어가 PR을 처음 보더라도 이 탭만 읽고 무엇을 왜 바꿨는지, 어디부터 볼지, 무엇이 위험한지 알게 하는 것이 목표다(2026-09-29 사용자 결정). 좋은 리뷰에 필요한 7가지 순서로 섹션을 둔다(2026-09-29 사용자 결정).
-    - 맨 위: `summary`. `revisions`가 있으면 바로 아래 "리뷰 반영 후 바뀐 점"을 최신부터 보여 주고, 항목마다 `<repoUrl>/compare/<since>...<sha>` 링크를 달아 그 뒤로 바뀐 부분만 볼 수 있게 한다.
-    - 1. 맥락: 풀려는 문제(`problem`)와 이슈 링크(`links`), "처음이라면" 접힌 영역(`<details>`)의 `basics`, 결정 목록(`decisions`. 고른 방식, 이유, 버린 대안), 범위(하는 것 / 일부러 하지 않은 것 두 칸). 이어서 핵심 아이디어(`intuition`)와 구조 그림(`diagrams`)을 그린다.
+    - 맨 위: `summary`. 바로 아래 화면 사진, 그 아래 `revisions`가 있으면 "리뷰 반영 후 바뀐 점"을 최신부터 보여 주고, 항목마다 `<repoUrl>/compare/<since>...<sha>` 링크를 달아 그 뒤로 바뀐 부분만 볼 수 있게 한다.
+    - 화면 사진(2026-10-05 사용자 결정): 개요만 읽어도 무엇이 바뀌었는지 눈으로 보이게, 대상 탭의 미리보기를 찍은 사진을 요약 바로 아래 "화면" 칸에 둔다. 바뀐 뒤 모습만 찍고 비교 기준(바뀌기 전) 화면은 찍지 않는다.
+      - 찍기: `build`가 HTML을 만든 뒤, 설정 파일 폴더 프로젝트의 `playwright`나 `@playwright/test`로 그 HTML을 `file://`로 열어 찍는다(스모크와 같은 방식, 9.4). 대상마다 기본 상태(기본 props와 첫 시나리오), 프리셋(파일에 적힌 순서), 첫 시나리오를 뺀 시나리오 순서로 최대 4장, PR 전체 최대 12장이다. 장마다 저장된 편집 상태를 지우고 새로 연 뒤 그 대상 탭을 누르고 프리셋이나 시나리오 버튼 하나만 누른다.
+      - 화면 폭 1024px(좁은 화면 배치라 미리보기가 위에 가득 찬다), 픽셀 배율 2로 찍는다. 미리보기 영역(`.review-preview`) 안에서 실제로 그려진 곳(글자, 이미지·SVG·입력 요소, 배경이나 테두리가 있는 요소)을 모두 감싸는 사각형에 16px 여백을 더해 자르고(작은 컴포넌트가 넓은 빈 공간 속에 작게 찍히지 않게), 미리보기 영역 밖으로는 넘기지 않으며 높이는 최대 1200px이다. JPEG(품질 80)를 data URL로 HTML 안 `<script type="application/json" id="review-shots">`에 `[{ case, state, kind, src, width, height }]`로 넣는다(`kind`는 `default`·`preset`·`scenario`, `state`는 프리셋·시나리오 이름이고 기본 상태는 "기본", `width`·`height`는 자른 크기(CSS px)). 다시 빌드하지 않고 결과 HTML에 이 태그만 끼워 넣는다.
+      - playwright가 없거나 찍다가 실패하면 사진 없이 빌드를 끝내고 그 사실을 출력한다. 렌더링 오류가 난 상태도 찍지 않고 건너뛴다. `build --no-shots`면 찍지 않는다. dev 서버에서는 찍지 않는다.
+      - 화면: 사진이 있으면 "화면" 칸에 격자로 둔다(넓은 화면 2열, 좁은 화면 1열). 사진은 찍힌 크기(`width`·`height`) 그대로 보여 주고 칸보다 넓으면 칸 폭에 맞춰 줄인다(작은 컴포넌트를 키우지 않는다). 사진마다 아래에 "대상 title · 상태 이름"을 쓰고, 누르면 그 대상 탭을 그 상태(프리셋 적용 또는 그 시나리오 선택)로 연다. 사진이 없으면 칸을 그리지 않는다.
+    - 1. 맥락: 풀려는 문제(`problem`)와 이슈 링크(`links`), "처음이라면" 접힌 영역(`<details>`)의 `basics`, 결정 목록(`decisions`. 질문, 고른 답, 이유, 버린 대안, 코드 이름), 범위(하는 것 / 일부러 하지 않은 것 두 칸). 이어서 핵심 아이디어(`intuition`)와 구조 그림(`diagrams`)을 그린다.
+      - 결정과 이유(2026-10-04 사용자 결정): 코드를 모르는 리뷰어도 읽히도록 결정마다 그 결정이 답하는 질문(`question`)을 굵게 먼저 두고, 고른 답(`choice`), 이유, 버린 대안을 잇는다. 질문과 답은 기능·동작 말로 쓰고 props·함수 이름은 쓰지 않으며, 코드 이름은 맨 아래 "코드" 줄(`code`)에 작게 모은다. 결정은 잘못 이해하면 PR 전체 판단이 바뀌는 설계급만 최대 3개 고르고, 그보다 작은 결정은 읽는 순서의 `side` 단계 설명으로 보낸다. 결정에 쓴 이유는 핵심 아이디어·읽는 순서·집중해서 봐 줄 곳에서 다시 쓰지 않는다.
       - 핵심 아이디어: `idea` 아래에 예시 그림을 그린다. `flow`는 단계 상자를 화살표로 잇고 상자마다 예시 데이터를 고정폭 글꼴로 보여 준다. `compare`는 전/후 상자를 나란히(좁은 화면에서는 위아래로) 둔다.
       - 구조 그림(2026-09-29 사용자 결정): 시퀀스(모듈·서버 사이 호출 순서)나 아키텍처(컴포넌트·모듈의 관계)처럼 그림이 있어야 이해가 쉬울 때만 `diagrams`에 넣고, 핵심 아이디어 다음에 그린다. **Mermaid 같은 다이어그램 문법·라이브러리는 쓰지 않고 SVG를 직접 쓴다.** SVG는 `viewBox`만 두고 화면 폭에 맞춰 줄어든다(최대 720px). 색은 리뷰 화면 색을 따르도록 `rv-d-*` 클래스(`rv-d-box` 상자, `rv-d-accent` 이번 PR에서 바뀐 상자, `rv-d-line` 선, `rv-d-arrow` 화살표 머리, `rv-d-muted` 보조 글자)를 쓴다. 화면은 넣기 전에 `<script>`, `<foreignObject>`, `on*` 속성, `#`로 시작하지 않는 `href`를 지운다. 읽을 수 없는 SVG면 그 자리에 "그림을 그릴 수 없습니다"를 보여 준다.
     - 2. 길잡이: 변경 요약(`changes`), 읽는 순서(`readingOrder`), 집중해서 봐 줄 곳(`focus`), 대충 봐도 되는 곳(`skim`).
       - 읽는 순서: 단계마다 번호, 핵심/부수 표시(`role`), 제목, 파일 경로, 설명, `snippet`(코드 패널과 같은 문법 강조, 첫 `files` 확장자 기준)을 보여 준다.
-    - 3. 증거: 테스트(파일과 보장하는 것), 직접 확인한 방법, CI 결과(상태 표시와 이름). UI 전/후 스크린샷 대신 대상 탭과 `compare` 예시가 그 역할을 한다. 테스트·CI가 비었으면 "추가한 테스트 없음", "CI 결과 없음"을 보여 준다.
+      - 단계의 `files` 중 하나가 어떤 대상의 `sources`에 있으면 제목 옆에 "플레이그라운드에서 보기" 버튼을 둔다. 누르면 그 대상 탭으로 간다(2026-09-29 사용자 결정). 겹치는 대상이 여럿이면 버튼도 여럿이고, 버튼에는 대상 `title`을 쓴다.
+    - 3. 증거: 테스트(파일과 보장하는 것), 직접 확인한 방법, CI 결과(상태 표시와 이름). 바뀐 뒤 화면은 맨 위 화면 사진이 보여 주고, 바뀌기 전과의 비교는 `compare` 예시와 대상 탭이 맡는다. 테스트·CI가 비었으면 "추가한 테스트 없음", "CI 결과 없음"을 보여 준다.
     - 4. 직접 만져 보기: 플레이그라운드 목록(대상 `title`, 첫 `sources` 경로, 프리셋·시나리오 이름. 누르면 그 탭으로 간다)과 `previews` 링크.
     - 5. 크기: 빌드가 비교 기준과의 차이로 바뀐 파일 수와 추가·삭제 줄 수, 커밋 목록(`repoUrl`이 있으면 커밋 링크)을 채운다. 추가+삭제가 400줄을 넘으면 "커밋 단위로 나눠 읽어 주세요"를 보여 준다. `size`가 있으면 같이 보여 준다.
     - 6. 위험과 영향 범위: 영향 범위, 호환성, 배포 주의사항, 보안·성능 네 칸. 빈 칸은 "해당 없음"이다.
     - 7. 리뷰 방법: 코멘트 앞에 `must`(머지 전에 고쳐야 함), `nit`(사소한 제안), `question`(질문)을 붙여 달라는 안내와, 린트·포맷·타입은 CI에 맡기고 설계와 로직을 봐 달라는 안내. 고정 문구다.
     - 맨 아래: PR 링크, 커밋 SHA와 비교 기준.
     - `intuition`·`diagrams`·`revisions`·`previews`·`size`가 없으면 그 부분을 그리지 않는다. 나머지는 스킬이 늘 쓴다.
-  - 대상 탭: 지금까지의 플레이그라운드(미리보기, 코드 패널, 오른쪽 패널) 그대로다.
+    - 글 안의 인라인 코드: `pr.ts` 문장 안에서 백틱(`` ` ``)으로 감싼 부분은 백틱을 지우고 인라인 코드(고정폭 글꼴, 옅은 배경)로 보여 준다. 다른 마크다운 문법은 해석하지 않는다. 이미 고정폭으로 보여 주는 칸(`flow`·`compare`의 `data`, `snippet`, 파일 경로)과 SVG는 그대로 둔다.
+  - 대상 탭: 플레이그라운드를 좌우로 나눈다(2026-10-04 사용자 결정). 왼쪽은 코드 패널(소스 전체, PR diff, 영향 범위), 오른쪽은 미리보기와 그 아래 편집 패널(Props, 프리셋, 호출 기록, 시나리오, 요청 기록, 편집 상태)이다. 오른쪽이 길어져도 코드를 보며 만질 수 있게 왼쪽은 화면에 붙어 따라온다. 좁은 화면(1024px 이하)에서는 위아래로 쌓고 오른쪽(미리보기와 편집 패널)을 먼저 둔다.
+    - 자리 바꾸기(2026-10-04 사용자 결정): 두 칸 맨 위에 손잡이(⠿와 칸 이름 "코드", "미리보기")를 둔다. 손잡이를 끌어 반대쪽 칸 위에 놓으면 두 칸의 좌우가 바뀐다. 끄는 동안 놓을 칸에 테두리를 그린다.
+    - 폭 조절(2026-10-04 사용자 결정): 두 칸 사이에 세로 디바이더를 둔다. 끌면 왼쪽 칸 폭이 바뀌고(전체의 20%~80%), 두 번 누르면 반반으로 돌아간다. 키보드로는 디바이더에 포커스를 두고 ←/→로 5%씩 바꾼다.
+    - 좌우 순서와 폭은 열람자 취향이라 케이스와 상관없이 `localStorage`의 `review-kit:layout` 키에 `{ codeFirst, ratio }`로 저장한다(7장). "초기화"는 이 값을 지우지 않는다.
+    - 좁은 화면에서는 손잡이와 디바이더를 숨기고 위의 쌓는 순서를 따른다.
 - 탭을 바꾸면 그 대상의 플레이그라운드를 새로 마운트한다. props와 편집한 시나리오는 케이스마다 저장돼 있어(7장) 그대로 돌아오고, 시나리오 선택·호출 기록·요청 기록은 처음부터 시작한다. 모킹 엔진은 하나이고 탭을 바꿀 때 그 대상의 첫 시나리오 라우트로 바꾼다. 개요 탭에서는 미리보기를 그리지 않는다.
 
 ---
@@ -401,7 +427,7 @@ wrapper: ({ children }) => (
 ```
 
 - 라우터는 `MemoryRouter`(또는 사용하는 라우터의 메모리 히스토리)를 쓴다. 단일 HTML에서는 History API 라우팅이 안 되고, 페이지 케이스는 `initialPath`로 시작 URL을 정한다.
-- 주소 표시줄: 미리보기 툴바에 라우터의 현재 주소(경로+쿼리+hash)를 보여 준다. 링크나 버튼으로 이동하면 바로 바뀌고, 주소를 직접 입력하고 Enter를 누르면 그 주소로 이동한다. `↺`는 `initialPath`로 이동한다. props나 시나리오가 바뀌어 다시 마운트될 때(4.2)는 `initialPath`로 돌아가지 않고 보고 있던 주소에서 다시 시작한다. 라우터는 프로젝트마다 다르므로 review-kit은 wrapper에 `address` prop(`report(path)`, `connect(navigate)`)을 넘기고, wrapper가 라우터 안에서 현재 주소를 알리고 이동 함수를 연결한다. wrapper가 연결하지 않으면 주소 표시줄을 숨긴다.
+- URL 표시줄: 미리보기 툴바에 라우터의 현재 URL(경로+쿼리+hash)을 보여 준다. 링크나 버튼으로 이동하면 바로 바뀌고, URL을 직접 입력하고 Enter를 누르면 그 URL로 이동한다. `↺`는 `initialPath`로 이동한다. props나 시나리오가 바뀌어 다시 마운트될 때(4.2)는 `initialPath`로 돌아가지 않고 보고 있던 URL에서 다시 시작한다. 라우터는 프로젝트마다 다르므로 review-kit은 wrapper에 `address` prop(`report(path)`, `connect(navigate)`)을 넘기고, wrapper가 라우터 안에서 현재 URL을 알리고 이동 함수를 연결한다. wrapper가 연결하지 않으면 URL 표시줄을 숨긴다.
 
   ```tsx
   function AddressSync({ address }: { address: ReviewAddress }) {
@@ -427,6 +453,7 @@ wrapper: ({ children }) => (
   - 구현(2단계): 리뷰 화면은 `#review-root`의 Shadow DOM 안에 그리고, 미리보기는 일반 DOM의 `div[slot="preview"]`에 `createPortal`로 그린 뒤 Shadow DOM의 `<slot name="preview">`로 꽂는다. Knot `GlobalStyle`처럼 `button`, `ul`을 초기화하는 전역 스타일과 Emotion 스타일은 일반 DOM에만 닿으므로 리뷰 화면이 깨지지 않는다.
   - slot으로 꽂힌 미리보기는 Shadow DOM 쪽에서 글꼴과 색을 물려받으므로 `:host`에 `all: initial`을 쓰지 않는다. 리뷰 화면 요소에만 글꼴과 색을 직접 준다.
 - 폭 조절 슬라이더로 미리보기 컨테이너 폭을 바꿀 수 있게 하면 반응형과 말줄임 문제를 바로 확인할 수 있다. 미디어 쿼리까지 확인하려면 미리보기를 `srcdoc` iframe에 넣어야 한다.
+  - 슬라이더 범위는 240px부터 미리보기 영역의 실제 좌우 폭까지다. 기본값 "가득"은 미리보기 영역 폭을 그대로 쓰고, 글자 대신 그 폭을 `NNNpx`로 보여 준다. 창 크기가 바뀌면 최댓값과 표시 값도 따라 바뀐다. 직접 고른 폭이 영역보다 넓어지면 영역 폭으로 줄여 보여 준다.
 
 ---
 
@@ -437,21 +464,28 @@ wrapper: ({ children }) => (
 `react-docgen` 8(Babel 파서 기반, Storybook도 쓰는 도구)을 빌드 시점에 실행하면 컴포넌트 props의 이름, 타입, 필수 여부, 기본값, JSDoc 설명, 유니온 리터럴 목록을 얻을 수 있다.
 
 - `react-docgen-typescript`는 TypeScript JS API(`ts.createProgram`)가 필요한데, TypeScript 7(Knot가 쓰는 7.0.2)에는 이 API가 없다. `react-docgen`은 TypeScript 버전과 무관하므로 이쪽을 쓴다 (2026-09-27 결정).
-- `react-docgen`은 파일 하나를 문법으로만 읽는다. 다른 파일에서 가져온 타입이나 `ButtonHTMLAttributes` 같은 상속 props는 풀지 못하므로, 풀지 못한 타입은 JSON 편집기로 보여준다.
+- `react-docgen`은 파일 하나를 문법으로만 읽는다. 다른 파일에서 가져온 타입이나 `ButtonHTMLAttributes` 같은 상속 props는 풀지 못하므로, 풀지 못한 타입은 JSON 편집기로 보여준다. 다만 케이스 기본값이 문자열·숫자·boolean이면 JSON 편집기 대신 기본값의 `typeof` 컨트롤을 쓰고, 정해진 값만 받는 타입이면 스킬이 `controls`의 `options`를 채운다.
 - 케이스의 `sources` 첫 파일을 대상 컴포넌트로 보고, 그 파일의 default export 컴포넌트 props를 가상 모듈 `virtual:review-props`로 주입한다.
 
 | props 타입 | 컨트롤 |
 | --- | --- |
 | `string` | 텍스트 입력 |
-| `number` | 숫자 입력 |
+| `number` | 숫자 입력(`type="number"`). 범위가 있으면 `min`·`max`·`step`을 걸고, 양끝이 다 있으면 슬라이더를 같이 둔다 |
 | `boolean` | 체크박스 |
-| `'a' \| 'b'` 리터럴 유니온 | 셀렉트 |
+| `'a' \| 'b'`, `1 \| 2` 리터럴 유니온 | 셀렉트 |
+| `controls`에 `options`가 있는 키 | 셀렉트 (타입과 상관없이) |
 | 함수 (`onClick` 등) | 편집 대신 호출 기록 패널에 표시 |
 | 객체, 배열, 그 외 | JSON 편집기 |
 
 - 컨트롤은 케이스 `props`에 있는 키에만 만든다. 타입은 docgen 결과에서 같은 이름을 찾아 쓰고, 없으면(Harness 전용 props 등) 기본값의 `typeof`로 정한다. docgen에만 있고 케이스 `props`에 없는 값(예: Harness가 들고 있는 `current`)은 편집하지 않는다.
 - 함수 props는 호출될 때 이름과 인자를 기록하는 로거로 바꿔 끼운다(Storybook의 actions와 같은 방식). docgen에서 함수 타입인 props마다 로거를 만들어 `render`의 두 번째 인자 `actions`로 넘기고, 컴포넌트를 바로 그리는 케이스는 `<C {...props} {...actions} />`처럼 펼쳐 넣는다.
 - `ReactNode` 같은 props는 편집 대상에서 빼고 케이스의 `render`에서 채운다.
+- 타입에 맞지 않는 값은 넣을 수 없게 한다(2026-10-04 사용자 결정). 문자열이 아닌 값은 자유 입력창으로 받지 않는다. 고를 값이 정해져 있으면 셀렉트, 숫자는 숫자 입력이다.
+- 범위·선택지는 케이스의 `controls`에 적는다. 타입만으로는 `total`이 1 이상인지, 케이스 전용 문자열 키가 어떤 값을 받는지 알 수 없고, 대상 저장소 코드에 JSDoc 태그를 더할 수도 없기 때문이다. 스킬이 대상 코드(분기, 검증, 상수)를 읽고 채운다.
+  - `options`: 셀렉트로 바꾼다. docgen 리터럴 유니온보다 앞선다. 케이스 전용 키도 셀렉트로 만들 수 있다.
+  - `min`·`max`·`step`: 숫자 키에만 쓸 수 있다(타입이 막는다). 입력값이 범위 밖이거나 `step`에 맞지 않으면 반영하지 않고 입력칸 아래에 이유("1 이상", "정수만")를 보여 준다. 빈 칸도 반영하지 않는다.
+  - `controls`의 값 타입은 `props`에서 추론한 `P`를 쓰고 추론에는 쓰지 않는다(`NoInfer`). 그래서 `options: ["xl"]`처럼 `ButtonSize`에 없는 값은 tsc 오류다.
+- 프리셋·붙여넣기·저장된 값이 범위를 벗어나도 그대로 그린다(경계 밖 동작을 보는 것도 리뷰다). 이때 컨트롤에 범위 밖이라고 표시한다.
 
 ### 5.2 프리셋
 
@@ -502,8 +536,8 @@ export function startMocking(getRoutes: () => MockRoute[]) {
 }
 ```
 
-- 목이 없는 요청은 어차피 외부 fetch가 막혀 있으므로 501과 요청 주소를 돌려줘서 어떤 목이 빠졌는지 화면에서 보이게 한다.
-- 요청 주소가 상대 경로(`baseURL: ''`)여도 `file://`과 http 양쪽에서 핸들러의 `/api/...` 경로와 맞는다(2026-09-27 확인, 3.1).
+- 목이 없는 요청은 어차피 외부 fetch가 막혀 있으므로 501과 요청 URL을 돌려줘서 어떤 목이 빠졌는지 화면에서 보이게 한다.
+- 요청 URL이 상대 경로(`baseURL: ''`)여도 `file://`과 http 양쪽에서 핸들러의 `/api/...` 경로와 맞는다(2026-09-27 확인, 3.1).
 - 요청 기록 패널(메서드, URL, 상태, 걸린 시간)을 두면 페이지가 어떤 API를 부르는지 리뷰어가 코드 없이 알 수 있다.
   - 구현: `startMocking(getRoutes, onRecord)`가 응답을 돌려줄 때마다 `{ method, url, status, ms }`를 `onRecord`로 넘기고, 리뷰 화면은 최근 100개를 새것부터 보여준다. 목이 없어 501이 된 요청은 빨간색으로 표시한다.
   - 모킹은 리뷰 화면을 그리기 전에 한 번 시작한다. 시나리오가 없는 컴포넌트 케이스도 켜 두어, 예상하지 못한 요청이 기록에 드러나게 한다. 시나리오 선택 UI(3.4)가 생기기 전에는 첫 시나리오를 쓴다.
@@ -532,7 +566,7 @@ export function startMocking(getRoutes: () => MockRoute[]) {
 
 ## 7. 편집 상태 저장과 공유
 
-- 편집한 props와 시나리오는 `localStorage`에 `review-kit:{PR번호}:{케이스}` 키로 케이스마다 저장한다(아티팩트에서 동작 확인). PR번호는 빌드 옵션 `--pr`로 받고, 없으면 PR 폴더 이름 앞의 숫자를 쓴다(숫자가 없으면 `local`). 케이스는 확장자를 뺀 케이스 파일 이름이다(3.4). 값은 `{ props, scenarios }` JSON이다.
+- 편집한 props와 시나리오는 `localStorage`에 `review-kit:{PR번호}:{케이스}` 키로 케이스마다 저장한다(아티팩트에서 동작 확인). PR번호는 빌드 옵션 `--pr`로 받고, 없으면 PR 폴더 이름 앞의 숫자를 쓴다(숫자가 없으면 `local`). 케이스는 확장자를 뺀 케이스 파일 이름이다(3.4). 값은 `{ props, scenarios }` JSON이다. 플레이그라운드 좌우 순서와 폭은 따로 `review-kit:layout` 키에 저장한다(3.4).
   - `scenarios`는 시나리오 이름 → 라우트 배열이고, 케이스 기본값과 다른 시나리오만 넣는다. 불러올 때는 케이스에 있는 시나리오 이름만 받는다. 선택한 시나리오는 저장하지 않고 늘 첫 시나리오로 시작한다(3.7).
   - JSON 복사/붙여넣기도 같은 `{ props, scenarios }` 모양을 쓴다. 붙여넣은 JSON에 있는 키만 바꾼다.
 - 다른 리뷰어에게 같은 상태를 보여주려면 "JSON 복사"와 "JSON 붙여넣기"를 둔다. 아티팩트는 `#key=value` hash와 쿼리 문자열을 iframe에 전달하지 않으므로(1.1) URL 공유는 하지 않는다.
@@ -544,13 +578,23 @@ export function startMocking(getRoutes: () => MockRoute[]) {
 
 ## 8. 코드 패널
 
-- 탭: 소스 전체, PR diff, 영향 범위. 패널은 미리보기 아래에 두고, `sources`가 여러 개면 소스·diff 탭 안에서 파일을 고른다. 결정 목록은 PR 단위라 개요 탭으로 옮겼다(3.4). diff가 비어 있으면 "비교 기준과 달라진 내용 없음"을 보여준다.
+- 탭: 소스 전체, PR diff, 영향 범위. 패널은 플레이그라운드 왼쪽에 두고(3.4), `sources`가 여러 개면 소스·diff 탭 안에서 파일을 고른다. 결정 목록은 PR 단위라 개요 탭으로 옮겼다(3.4). diff가 비어 있으면 "비교 기준과 달라진 내용 없음"을 보여준다.
 - 문법 강조: Shiki는 결과가 정확하지만 문법과 테마를 번들에 넣으면 파일이 커진다. `prism-react-renderer`가 가볍다. 단일 파일이므로 크기를 보고 고른다.
   - 비교 결과(2026-09-29, 4.3, `review-365.html`): 강조 없음 3705KB, `prism-react-renderer` 2.4.1(`themes.github`) 3789KB(+84KB), Shiki 4.4.3(`shiki/core` + JavaScript 정규식 엔진 + tsx 문법 + github-light 테마 하나) 4046KB(+341KB). **`prism-react-renderer`를 쓴다.**
   - 언어는 확장자로 고른다: `.tsx`·`.jsx`는 `tsx`, `.ts`·`.js`는 `typescript`, `.css`는 `css`, 그 외는 강조 없이 보여준다. 줄 번호를 붙인다.
 - diff는 `+`, `-` 줄 색만 칠해도 충분히 읽힌다.
 - 파일 경로는 커밋 SHA 기준 GitHub 링크로 만든다. `window.open`은 대부분의 열람자에게 `null`을 돌려주므로 쓰지 않고, `<a href target="_blank" rel="noopener">` 링크로 새 탭을 연다(1.1). 옆에 링크 복사 버튼을 같이 둔다.
-  - 구현(4.4): 파일이 하나면 경로 자체가 링크이고, 여러 개면 파일 선택 옆에 "GitHub에서 보기" 링크를 둔다. 링크 복사는 7장 JSON 복사와 같이 `writeText`가 실패하면 주소를 읽기 전용 입력칸에 띄워 선택해 둔다. `repoUrl`이나 SHA가 없으면 링크와 복사 버튼을 숨긴다.
+  - 구현(4.4): 파일이 하나면 경로 자체가 링크이고, 여러 개면 파일 선택 옆에 "GitHub에서 보기" 링크를 둔다. 링크 복사는 7장 JSON 복사와 같이 `writeText`가 실패하면 URL을 읽기 전용 입력칸에 띄워 선택해 둔다. `repoUrl`이나 SHA가 없으면 링크와 복사 버튼을 숨긴다.
+- 모듈 이동(2026-10-04 사용자 결정): 소스 탭에서 Cmd(맥)나 Ctrl을 누른 채 클릭하면 그 import가 가리키는 파일로 이동한다. 에디터의 정의로 이동과 같은 동작이다.
+  - 클릭할 수 있는 곳: `import`·`export ... from`의 경로 문자열과, import로 들여온 이름(default, `{ a, b as c }`, `* as ns`)이 코드에 나오는 자리.
+  - 함께 넣는 파일: 빌드 때 `sources` 파일이 import하는 파일을 Vite 해석기(alias 포함)로 찾아 **한 단계만** 넣는다. `node_modules` 안이나 설정 폴더 밖 파일, `.ts`·`.tsx`·`.js`·`.jsx`·`.mjs`·`.cjs`·`.css`가 아닌 파일은 넣지 않는다. 들여온 파일 안의 import는 이미 들어 있는 파일을 가리킬 때만 이동한다.
+  - Cmd나 Ctrl을 누르고 있는 동안 이동할 수 있는 토큰에 마우스를 올리면 밑줄과 손가락 커서를 보여 준다.
+  - 이동하면 파일 줄에 그 파일 경로(GitHub 링크)와 "← 뒤로" 버튼을 둔다. 뒤로는 이동한 순서를 거꾸로 따라가고, 파일 선택에서 다른 `sources` 파일을 고르면 이동 기록을 비운다. diff 탭은 지금 보고 있는 파일의 diff를 보여 준다.
+- 코드 접기(2026-10-04 사용자 요청): 소스 탭의 코드를 VS Code처럼 접고 펼 수 있다. 파서 없이 들여쓰기로 접는 범위를 구한다(VS Code의 들여쓰기 기반 접기와 같은 규칙).
+  - 접는 범위: 바로 다음의 빈 줄이 아닌 줄이 더 깊이 들여써진 줄이 시작 줄이다. 그 뒤로 시작 줄과 같거나 얕은 들여쓰기의 줄(빈 줄 제외)이 나오기 전까지가 범위이고, 끝의 빈 줄은 범위에서 뺀다. 그래서 `}`처럼 시작 줄과 같은 깊이의 닫는 줄은 접혀도 보인다.
+  - import 묶음: 파일 맨 위처럼 `import` 문이 연달아 있으면(사이의 빈 줄 포함) 그 묶음(첫 import 줄부터 마지막 import 줄까지)을 하나의 범위로 접는다. 같은 줄에서 시작하는 들여쓰기 범위가 있으면 import 묶음을 우선한다.
+  - 표시: 줄 번호 옆 여백에 접기 표시(`›`/`⌄`)를 둔다. 코드에 마우스를 올린 동안만 보이고, 접힌 줄은 항상 보인다. 접으면 시작 줄 끝에 `⋯` 표시를 붙이고 범위 안 줄을 숨긴다. 표시나 `⋯`를 클릭하면 펼친다. 범위가 겹치면 바깥을 펼쳐도 안쪽은 접힌 채로 남는다.
+  - 상태는 파일마다 따로 두고, 다른 파일로 바꾸거나 모듈 이동을 하면 모두 펼친 상태로 시작한다. 줄 번호는 숨긴 줄을 빼지 않고 원래 번호를 그대로 보여 준다.
 
 ---
 
@@ -602,16 +646,18 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
 ````
 
 구현(5.1~5.4, 2026-09-29): 실제 스킬은 `review-page/SKILL.md`(11.1)이고 위 초안에서 아래가 바뀌었다.
-- 케이스 파일: 처음에는 대상마다 `review/cases/<PR번호>-<이름>.tsx`를 따로 빌드했으나, 지금은 PR 폴더 `review/cases/<PR번호>/`에 `pr.ts`와 대상마다 `<이름>.tsx`(최대 3개)를 쓰고 폴더 하나를 HTML 하나로 빌드한다(3.4). 폴더 이름이 저장 키의 PR번호가 된다(7장).
+- 케이스 파일: 처음에는 대상마다 `review/cases/<PR번호>-<이름>.tsx`를 따로 빌드했으나, 지금은 PR 폴더 `review/cases/<PR번호>/`에 `pr.ts`와 대상마다 `<이름>.tsx`(최대 9개)를 쓰고 폴더 하나를 HTML 하나로 빌드한다(3.4). 폴더 이름이 저장 키의 PR번호가 된다(7장).
 - PR 개요(`pr.ts`): PR 본문·커밋·diff와 바뀐 파일 주변 코드를 읽고 요약, 배경, 핵심 아이디어와 예시, 구조 그림(필요할 때만, 직접 쓴 SVG), 바뀐 점, 코드 흐름, 결정, 리뷰 포인트를 쓴다. 결정은 케이스에서 여기로 옮겼다. 예시 데이터는 PR 코드의 실제 타입·필드 이름으로 만든다.
 - `gh pr diff --name-only`는 git 루트 기준 경로라 `git rev-parse --show-prefix`를 떼고 `sources`에 넣는다.
 - 예시는 `example-component.tsx`(컴포넌트)와 `example-page.tsx`(페이지+네트워크) 두 개다.
 - 엣지 케이스 프리셋 목록과 시나리오 규칙을 스킬 본문에 고정한다(5.2, 6장).
-- 검증은 `npx tsc --noEmit` → 글쓰기 규칙 대조(`writing-rules.md`) → `node ${CLAUDE_SKILL_DIR}/src/cli.ts build`(11.1) → `scripts/smoke.mjs`(9.4) 순서다. 실패하면 케이스 파일만 고쳐 처음부터 다시 돌리고, 3번 실패하면 멈추고 오류를 보고한다. 케이스 파일 밖(`src/`, `review.config.ts`, wrapper)을 고쳐야 할 것 같으면 고치지 않고 사용자에게 묻는다.
+- 검증은 `npx tsc --noEmit` → 글쓰기 규칙 검사(`scripts/check-writing.mjs`)와 대조(`writing-rules.md`) → `node ${CLAUDE_SKILL_DIR}/src/cli.ts build`(11.1) → `scripts/smoke.mjs`(9.4) 순서다. 실패하면 케이스 파일만 고쳐 처음부터 다시 돌리고, 3번 실패하면 멈추고 오류를 보고한다. 케이스 파일 밖(`src/`, `review.config.ts`, wrapper)을 고쳐야 할 것 같으면 고치지 않고 사용자에게 묻는다.
 - 처음 설정(6단계, 11장): `review.config.ts`가 없으면 사용자 동의를 받아 `cli.ts init`을 실행하고, 프로젝트의 번들러 설정·tsconfig·`package.json`을 읽어 `alias`, `jsxImportSource`, `define`, `svgr`, `sharedPackages`를 채운다. `wrapper`·`styles`·`mockHandlers`가 필요해 보이면 무엇을 넣을지 사용자에게 제안만 한다. `init`이 안내한 tsconfig·`.gitignore` 변경은 보여 주고 동의를 받아 넣는다. 그다음 예시 케이스를 빌드해 확인하고 PR 케이스 작업으로 넘어간다. 이 단계에서만 케이스 파일 밖을 고친다.
 - 마지막에 결과 HTML 경로와 크기를 알리고, 사용자가 원하면 Artifact 도구로 게시한다(1.1). 게시 후 Share 메뉴로 공유해야 리뷰어가 열 수 있다고 알린다.
 - 사용자 결정(처음 설정 동의, 대상 고르기, 기존 PR 폴더 덮어쓰기, PR 폴더 밖 수정, 아티팩트 게시)은 글로 묻지 않고 AskUserQuestion 선택지로 묻는다. 추천을 첫 선택지에 `(추천)`으로 두어 사용자가 엔터만 눌러도 진행되게 한다.
 - 글쓰기 규칙(2026-09-29 사용자 결정): 스킬이 쓰는 모든 글(`pr.ts` 문자열, 케이스 `title`과 프리셋·시나리오 이름, AskUserQuestion 문구, 끝난 뒤 보고)은 `review-page/writing-rules.md`를 지킨다. 이어지는 맥락의 문장은 한 문장으로 잇고, 요약 선언문 뒤에 같은 묘사를 반복하지 않으며, 금지 표현 목록의 표현을 쓰지 않는다. 검증 단계에서 `pr.ts`를 쓴 뒤 목록과 대조해 고친다.
+  - 자동 검사(2026-10-04 사용자 결정): 금지 표현은 정규식 목록 `review-page/banned-patterns.txt`(사용자의 글쓰기 훅 `banned-patterns.txt`와 같은 내용)로 기계 검사한다. `review-page/scripts/check-writing.mjs <PR 폴더>`가 폴더 안 `.ts`, `.tsx` 파일을 `@babel/parser`로 읽어 한글이 든 문자열, 템플릿 문자열, JSX 글자, 주석만 꺼내고, 그 안의 백틱 인라인 코드를 지운 뒤 줄마다 목록과 맞춰 본다. 코드 이름과 원문을 그대로 두는 값(`pr.ts`의 맨 위 `title`, `url`, `file`, `files`, `since`, `code`, `snippet`, `data`, 이슈 제목인 `links`, CI `name`, import 경로)은 검사하지 않고, `svg`는 `<text>` 안 글자만 검사한다. 위반이 있으면 `파일:줄`, 걸린 글, 걸린 패턴을 출력하고 1로 끝난다. 스킬은 위반 문장을 뜻을 바꾸지 않고 고쳐 쓴 뒤 통과할 때까지 다시 돌리고, 그다음 정규식으로 잡을 수 없는 규칙(문장 잇기, 요약 선언 반복, 뜻이 맞지 않는 단어)을 눈으로 대조한다.
+- 병렬 작성(2026-10-04 사용자 결정): 페이지 하나를 만드는 데 시간이 오래 걸려, 대상을 고른 뒤 서로 기다릴 필요가 없는 일을 동시에 돌린다. 넓은 맥락 조사(`Explore`)와 대상마다 케이스 에이전트 하나(최대 9개)를 한 번에 띄운다. 케이스 에이전트는 '케이스 규칙'을 따라 PR 폴더의 자기 케이스 파일 하나만 쓰고, `find-impacts.sh`를 돌리고, `tsc` 결과에서 자기 파일 오류를 고친 뒤 프리셋·시나리오 이름, 넣지 못한 엣지 케이스, 확인할 수 없는 동작, `impacts`를 돌려준다. 그동안 메인은 CI·리뷰 기록·diff를 읽어 맥락 조사 없이 쓸 수 있는 `pr.ts` 칸부터 쓰고, 맥락 조사 결과가 오면 나머지를 쓴다. 사용자에게 묻는 일과 검증(tsc → 글쓰기 규칙 → build → smoke)은 메인만 한다. `pr.ts`는 개요의 일관성을 위해 메인이 쓴다.
 - 5.6 시험(2026-09-29): Knot #362(Chip + 유틸), #368(컴포넌트 두 개, props 없는 애니메이션), #346(네트워크 위젯)을 scratchpad 클론에서 스킬 본문만 주고 돌렸다. 셋 다 tsc·빌드·스모크를 첫 시도에 통과했다. 헷갈렸다고 보고된 점을 스킬에 반영했다: 대상 고르기(바뀐 가장 작은 단위, 컴포넌트+유틸, 품는 대상), 케이스 전용 props의 컨트롤 종류와 ReactNode 대체 prop 이름, props 없는 대상, `actions` 범위, 숫자 경계값·비유한 값, 프리셋 12개 상한, 시나리오 4개는 최소이고 조작 뒤 요청·이어지는 id·전역 캐시, 에러 body, PR 본문 읽기(`--json body,commits`)와 본문·diff 불일치 시 diff 우선, `find-impacts.sh`에 넘길 파일과 테스트·목 제외, 빌드 경고 처리, 확인할 수 없는 동작 보고.
 
 ### 9.3 영향 범위 찾기
@@ -725,7 +771,7 @@ export default defineConfig({
   jsxImportSource: '@emotion/react',       // 기본값 'react'
   define: { 'process.env.API_BASE_URL': '""' },
   sharedPackages: ['@emotion/react'],      // 대상 node_modules에서 가져올 패키지. react, react-dom, msw는 항상 포함
-  styles: ['./review/fonts.css'],          // 미리보기에 넣을 CSS 파일(폰트 @font-face 등). 번들에 인라인된다
+  styles: ['./review/preview.css'],        // 미리보기에 넣을 CSS 파일. 번들에 인라인된다. 폰트 파일은 넣지 않는다
   wrapper: './review/Wrapper.tsx',         // 4.1 Provider 묶음 컴포넌트 파일
   mockHandlers: './src/shared/api/mock/handlers', // 6.1 기존 MSW 핸들러 파일. 시나리오에 없는 요청에 쓴다
   casesDir: './review/cases',              // 케이스 이름만 줄 때 찾는 폴더
@@ -735,9 +781,10 @@ export default defineConfig({
 });
 ```
 
-- 설정 파일은 Node 타입 제거로 바로 import하고, 미리보기는 브라우저 번들에서 돈다. 그래서 `wrapper`는 함수가 아니라 컴포넌트 파일 경로로 받아 `virtual:review-wrapper`로 주입한다. 파일은 `({ initialPath, address, children }: WrapperProps) => ReactNode` 컴포넌트를 default export한다. `address`는 4.1 주소 표시줄 연결용이다. 리뷰 화면이 key로 다시 마운트하므로 `QueryClient`는 wrapper 안에서 `useState`로 만들면 된다(4.2).
+- 설정 파일은 Node 타입 제거로 바로 import하고, 미리보기는 브라우저 번들에서 돈다. 그래서 `wrapper`는 함수가 아니라 컴포넌트 파일 경로로 받아 `virtual:review-wrapper`로 주입한다. 파일은 `({ initialPath, address, children }: WrapperProps) => ReactNode` 컴포넌트를 default export한다. `address`는 4.1 URL 표시줄 연결용이다. 리뷰 화면이 key로 다시 마운트하므로 `QueryClient`는 wrapper 안에서 `useState`로 만들면 된다(4.2).
 - `sources`, `impacts` 경로는 설정 파일이 있는 폴더 기준이다.
 - `styles`는 `virtual:review-styles`에서 순서대로 import한다. 리뷰 화면(Shadow DOM)은 시스템 글꼴을 쓰므로 여기 넣은 CSS는 미리보기 쪽 문서에만 적용된다. `url()`의 패키지 경로는 그 CSS 파일 위치(프로젝트 `node_modules`)에서 찾는다.
+  - 폰트 파일(`@font-face`의 `url()`)은 넣지 않는다. 인라인된 폰트 파일은 아티팩트 공개 공유를 막는다(1.1 표). 빌드 결과에 `data:font/`가 있으면 빌드가 경고한다. 미리보기는 프로젝트 `font-family`의 대체 글꼴로 보인다(2026-10-04 사용자 결정. 그 전에는 스킬이 Pretendard woff2를 갖고 `review-kit/fonts/pretendard.css`로 넣었다).
 
 `review-kit` 이름 풀기: 설치된 패키지가 없으므로 케이스·설정 파일의 `import ... from 'review-kit'`은 아래 세 곳에서 따로 푼다. Node와 Vite는 실행 중인 스킬 폴더의 `src/index.ts`로 돌리고, 대상 `tsc`는 프로젝트에 둔 타입 선언 파일을 본다. 플러그인은 사용자마다 다른 캐시 경로에 설치되므로 tsconfig에 스킬 경로를 적을 수 없기 때문이다(2026-09-29 사용자 결정).
 
@@ -772,8 +819,8 @@ export default defineConfig({
 
 Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인은 scratchpad에 clone한 Knot 복사본에서 한다. 사용자와 같은 경로로 설치해 확인한다.
 
-1. prplay 로컬 경로를 마켓플레이스로 추가하고 플러그인을 설치한다: `claude plugin marketplace add <prplay 경로>` → `claude plugin install prplay@prplay`. 설치 전에 `claude plugin validate <prplay 경로>`가 통과해야 한다. 로컬 폴더 마켓플레이스는 원본 폴더에서 실행되므로(11장 '플러그인 실행 환경'), 캐시 경로와 업데이트 동작은 scratchpad 마켓플레이스에 플러그인 소스를 `file://` git 주소로 줘서 따로 확인한다.
-2. Knot 복사본 `frontend/`에 `review.config.ts`, `review/Wrapper.tsx`, `review/fonts.css`, `review/cases/<폴더>/`를 둔다. 원본은 prplay `targets/knot/`에 같은 구조로 있다. 폰트용 `pretendard`(1.3.9)는 복사본의 devDependency로 넣는다(2.3 표).
+1. prplay 로컬 경로를 마켓플레이스로 추가하고 플러그인을 설치한다: `claude plugin marketplace add <prplay 경로>` → `claude plugin install prplay@prplay`. 설치 전에 `claude plugin validate <prplay 경로>`가 통과해야 한다. 로컬 폴더 마켓플레이스는 원본 폴더에서 실행되므로(11장 '플러그인 실행 환경'), 캐시 경로와 업데이트 동작은 scratchpad 마켓플레이스에 플러그인 소스를 `file://` git URL로 줘서 따로 확인한다.
+2. Knot 복사본 `frontend/`에 `review.config.ts`, `review/Wrapper.tsx`, `review/cases/<폴더>/`를 둔다. 원본은 prplay `targets/knot/`에 같은 구조로 있다. 폰트는 넣지 않으므로 복사본에 패키지나 파일을 더하지 않는다(2.3 표, 11.2).
 3. tsconfig `paths`에 `review-kit` 한 줄(`./review/review-kit.d.ts`)을 넣는다(11.2). Knot tsconfig `include`는 `./**/*.ts(x)`라 `review/`가 이미 들어간다.
 4. Claude Code에서 `/prplay:review-page 366` 또는 스킬 폴더의 `cli.ts`로 `build 366` → `review/dist/review-366.html`(Stepper·Breadcrumb 탭 하나씩), `dev 366` → localhost.
 
@@ -811,7 +858,7 @@ Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인
 - 코드는 처음부터 이 저장소(prplay)에서 개발한다. Knot 저장소에는 파일을 만들거나 고치지 않는다.
 - Knot은 빌드 대상이다. 컴포넌트 소스, `node_modules`, tsconfig를 경로로만 참조한다. 경로는 `KNOT_DIR` 환경 변수로 정하고, 기본값은 `progress.md`의 Knot 경로다.
 - 예외였던 것(2026-09-27~29, 사용자 승인): 라이브러리 링크 테스트를 위해 PR #366 worktree에 `review-kit` 링크, `review.config.ts`, 케이스, `pretendard` devDependency를 넣었다. 스킬 방식(11장)으로 바꾸며 치웠고, 이후 Knot 확인은 scratchpad에 clone한 복사본에 스킬 폴더를 복사해서 한다(11.4).
-- 구조: `.claude-plugin/marketplace.json`(마켓플레이스), `plugins/prplay/`(플러그인. 스킬 원본은 `plugins/prplay/skills/review-page/`이고 빌드 스크립트 `src/build/`, 리뷰 화면과 모킹 엔진 `src/runtime/`을 포함한다, 11.1), `targets/knot/`(Knot 전용 `review.config.ts`, `review/Wrapper.tsx`, `review/fonts.css`, `review/cases/`. Knot 복사본에 복사해 쓰는 원본, 11.4).
+- 구조: `.claude-plugin/marketplace.json`(마켓플레이스), `plugins/prplay/`(플러그인. 스킬 원본은 `plugins/prplay/skills/review-page/`이고 빌드 스크립트 `src/build/`, 리뷰 화면과 모킹 엔진 `src/runtime/`을 포함한다, 11.1), `targets/knot/`(Knot 전용 `review.config.ts`, `review/Wrapper.tsx`, `review/cases/`. Knot 복사본에 복사해 쓰는 원본, 11.4).
 - 런타임이 쓰는 `react`, `react-dom`, `@emotion/react`, `@tanstack/react-query`, `react-router`, `msw`는 대상 프로젝트의 `node_modules`에서 가져온다(11.3 `sharedPackages`). 그래야 컴포넌트와 리뷰 화면이 같은 인스턴스를 쓴다. 빌드 도구(Vite, 플러그인, react-docgen)와 `@mswjs/interceptors`는 스킬 폴더 의존성으로 설치한다(11.3).
 
 1. **스파이크**: prplay에서 Knot을 대상으로, #365 Breadcrumb과 Stepper 케이스를 손으로 작성해 단일 HTML로 빌드한 뒤 아티팩트에 올려 실제로 도는지 확인한다. 1장의 미확인 항목(크기 상한, hash 전달, 공개 범위)도 여기서 확인한다.
@@ -829,6 +876,7 @@ Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인
 
 - [x] 아티팩트 파일 크기 상한 → 16MB, data: URI 포함 (1.1 표)
 - [x] 아티팩트에서 외부 이미지와 폰트 로딩이 막히는지 → 막힘. Google Fonts CSS와 일부 CDN 스크립트만 허용 (1.1 표)
+- [x] 인라인한 폰트 파일로 공개 공유가 되는지 → 안 됨. 공개 공유 검토에서 막힌다 (1.1 표)
 - [x] 부모 URL hash가 iframe으로 전달되는지 → 단순 `#anchor`만 전달, `#key=value`·쿼리 문자열은 전달 안 됨 (1.1 표)
 - [x] 아티팩트 iframe에서 `window.open`과 새 창 링크가 동작하는지 → `window.open`은 대부분 `null`, `<a target="_blank">`는 새 탭으로 열림 (1.1 표)
 - [x] 로그인하지 않은 사람의 아티팩트 열람 가능 여부 → 게시 직후 비공개, Share 메뉴로 공유하면 가능 (1.1 표, 로그아웃 상태 실제 열람은 미확인)

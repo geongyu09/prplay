@@ -21,7 +21,7 @@ export default defineCase({
       {label}
     </Button>
   ),
-  // 스킬의 엣지 케이스 표: 문자열(빈 값·아주 긴 값), 상태 boolean(로딩·비활성·조합), 리터럴 유니온 조합
+  // 스킬의 엣지 케이스 표: 문자열(빈 값, 아주 긴 값), 상태 boolean(로딩, 비활성, 조합), 리터럴 유니온 조합
   presets: {
     "빈 라벨": { label: "" },
     로딩: { isLoading: true },
@@ -43,7 +43,7 @@ export default defineCase({
 
 /*
 제어 컴포넌트(부모가 상태를 들고 콜백만 받는 컴포넌트)는 상태를 가진 Harness로 감싼다.
-콜백에서 상태를 바꾸고 actions 로거도 불러야 호출 기록에 남는다. (Knot PR #365 Stepper 케이스)
+콜백에서 상태를 바꾸고 actions 로거도 불러야 호출 기록에 나온다. (Knot PR #365 Stepper 케이스)
 
 export default defineCase({
   title: "Stepper",
@@ -51,6 +51,8 @@ export default defineCase({
   props: { total: 3 },
   render: ({ total }, actions) => <Harness total={total} actions={actions} />,
   presets: { "문서 1개": { total: 1 }, "문서 12개": { total: 12 } },
+  // 문서 수라 1 이상 정수만 받는다. 숫자 입력과 슬라이더가 이 범위로 묶인다
+  controls: { total: { min: 1, max: 20, step: 1 } },
   impacts: [],
 });
 

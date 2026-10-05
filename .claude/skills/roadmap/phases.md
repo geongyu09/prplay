@@ -15,10 +15,10 @@
 | 1.1 | Knot 구조 조사: 번들러 설정(webpack svgr 옵션, alias, `process.env` 사용처, CSS-in-JS 설정), API 호출 방식(fetch/axios), 서버 상태 라이브러리, 라우터 종류, 전역 Provider 목록을 정리해 `progress.md` 메모에 남긴다 | §2.3, §14 |
 | 1.2 | prplay에 `package.json` 생성, Vite·`vite-plugin-svgr`·`vite-plugin-singlefile` 설치(이미 있는 것은 재사용). Vite 8이면 JSX는 `oxc.jsx`로 처리하므로 `@vitejs/plugin-react`는 넣지 않는다 | §2.1, §2.2 |
 | 1.3 | `src/build/build.ts` 작성: 케이스 경로를 받아 가상 모듈 `virtual:review-case`로 주입, `assetsInlineLimit`, `resolve.dedupe`, alias 설정 | §2.2 |
-| 1.4 | Knot webpack 설정과 같은 결과가 나오도록 svgr 옵션(svgo 포함), `define`, JSX importSource(Emotion), 폰트 인라인을 Vite 쪽에 맞춘다 | §2.3 |
+| 1.4 | Knot webpack 설정과 같은 결과가 나오도록 svgr 옵션(svgo 포함), `define`, JSX importSource(Emotion)를 Vite 쪽에 맞춘다 | §2.3 |
 | 1.5 | `src/runtime/` 최소 화면: `ReviewCase` 타입과 `defineCase`, 미리보기 영역 + Provider wrapper(ThemeProvider, GlobalStyle, QueryClient, MemoryRouter) + Error Boundary | §3.1, §4.1, §4.3 |
 | 1.6 | 케이스 두 개 작성: `targets/knot/cases/365.tsx`(Stepper, Harness 포함)와 Breadcrumb 케이스 | §3.2 |
-| 1.7 | 빌드 → `dist/review-*.html` 하나만 생기는지, `file://`로 열었을 때 아이콘·폰트·테마가 Knot과 같은지 확인 | §2.1, §10 |
+| 1.7 | 빌드 → `dist/review-*.html` 하나만 생기는지, `file://`로 열었을 때 아이콘·테마가 Knot과 같은지 확인 | §2.1, §10 |
 | 1.8 | 아티팩트에 업로드하고 plan.md 14장 미확인 항목 확인: 파일 크기 상한, 외부 이미지·폰트 로딩, 부모 URL hash 전달, `window.open`, 비로그인 열람, Claude Code에서 바로 게시하는 경로 | §1, §14 |
 | 1.9 | (선택) React Cosmos, Ladle 빌드 결과에 vite-plugin-singlefile을 붙일 수 있는지 30분 안에서 확인하고, 되면 직접 만들지 말지 사용자와 결정 | §12 |
 
@@ -58,7 +58,7 @@
 
 | 번호 | 작업 | 참고 |
 | --- | --- | --- |
-| 3.1 | `@mswjs/interceptors` 브라우저 프리셋 + `BatchInterceptor` + MSW `getResponse`로 `startMocking` 구현. 목 없는 요청은 501 + 요청 주소 | §6.1 |
+| 3.1 | `@mswjs/interceptors` 브라우저 프리셋 + `BatchInterceptor` + MSW `getResponse`로 `startMocking` 구현. 목 없는 요청은 501 + 요청 URL | §6.1 |
 | 3.2 | 요청 기록 패널(메서드, URL, 상태, 걸린 시간) | §6.1 |
 | 3.3 | 네트워크를 쓰는 Knot 페이지 하나를 골라 페이지 케이스 작성: `initialPath`, 인증 Context 목, 시나리오 4개(정상, 빈 응답, 로딩 2000ms, 500 에러). body는 API 응답 타입으로 `satisfies` | §4.1, §6.2 |
 | 3.4 | 시나리오 선택 버튼과 라우트별 상태 코드·지연·body 편집 UI. JSON 편집기는 CodeMirror 6 | §6.3 |
@@ -127,7 +127,7 @@
 | 6.6 | README: 스킬 복사, 처음 설정, 스킬 사용법, 명령, 아티팩트 게시 방법, 1장 제약 요약 | §1, §10 |
 
 **완료 기준**
-- Knot 전용 내용은 `review.config.ts`, `review/`(wrapper, 폰트 CSS, 케이스)뿐이고, 스킬 폴더에는 없다.
+- Knot 전용 내용은 `review.config.ts`, `review/`(wrapper, 케이스)뿐이고, 스킬 폴더에는 없다.
 - 스킬 폴더만 복사한 Knot 복사본에서 기존 4케이스가 빌드되고 스모크·`tsc`를 통과하며, 결과 HTML이 스킬로 바꾸기 전과 같다.
 - 빈 Vite + React 프로젝트에 스킬 폴더만 복사하고 `init` 후 예시 케이스가 빌드된다. 대상 `package.json`은 바뀌지 않는다.
 - prplay에 npm 배포 설정과 `dist/`가 없다.

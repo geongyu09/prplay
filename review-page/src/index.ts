@@ -18,6 +18,8 @@ export type ReviewCase<P> = {
   render: (props: P, actions: Actions) => ReactNode;
   props: P;
   presets?: Record<string, Partial<P>>;
+  // 추론은 props에서만 한다. 그래야 options에 P에 없는 값을 넣으면 tsc 오류가 난다
+  controls?: NoInfer<Controls<P>>;
   scenarios?: Record<string, MockRoute[]>;
   initialPath?: string;
   impacts?: string[];
@@ -50,8 +52,8 @@ export type PrContext = {
   scope: { does: string[]; doesNot: string[] };
 };
 
-// rejected: 검토했다가 버린 대안과 이유
-export type PrDecision = { choice: string; why: string; rejected?: string };
+// question: 이 결정이 답하는 질문(코드 이름 없이), rejected: 버린 대안과 이유, code: 결정이 드러나는 코드 이름
+export type PrDecision = { question: string; choice: string; why: string; rejected?: string; code?: string[] };
 
 export type PrIntuition = {
   idea: string;
@@ -76,7 +78,7 @@ export type PrGuide = {
 };
 
 export type PrCodeStep = {
-  // core: 핵심 파일, side: 다른 변경에 따른 부수 수정
+  // core: 리뷰어가 판단할 약속·동작(props·타입·상태 위치·데이터 흐름), side: 구현 세부나 따라 고친 곳
   role: "core" | "side";
   title: string;
   files: string[];
@@ -101,6 +103,14 @@ export type PrRisk = {
 // since: 지난 리뷰 때 커밋 SHA
 export type PrRevision = { since: string; changes: string[] };
 
+// props 키마다 컨트롤의 범위·선택지를 좁힌다 (plan.md 5.1)
+export type Controls<P> = { [K in keyof P]?: PropControl<P[K]> };
+
+// options: 이 값들 중 하나만 고르는 셀렉트. min·max·step은 숫자 props에만. step이 정수면 정수만 받는다
+export type PropControl<T> = {
+  options?: readonly T[];
+} & ([NonNullable<T>] extends [number] ? { min?: number; max?: number; step?: number } : {});
+
 // 함수 props 이름 → 호출 기록 로거 (plan.md 5.1)
 export type Actions = Record<string, (...args: unknown[]) => void>;
 
@@ -108,7 +118,7 @@ export const defineCase = <P,>(c: ReviewCase<P>) => c;
 
 export const definePr = (pr: ReviewPr) => pr;
 
-// 주소 표시줄 연결 (plan.md 4.1). wrapper가 라우터 안에서 현재 주소를 알리고 이동 함수를 연결한다
+// URL 표시줄 연결 (plan.md 4.1). wrapper가 라우터 안에서 현재 URL을 알리고 이동 함수를 연결한다
 export type ReviewAddress = {
   report: (path: string) => void;
   // 해제 함수를 돌려준다
@@ -130,7 +140,7 @@ export type ReviewConfig = {
   define?: Record<string, string>;
   // 대상 node_modules에서 가져올 패키지. react, react-dom, msw는 항상 포함 (11.3)
   sharedPackages?: string[];
-  // 미리보기에 넣을 CSS 파일(폰트 @font-face 등). 번들에 인라인된다 (11.2)
+  // 미리보기에 넣을 CSS 파일. 번들에 인라인된다. 폰트 파일은 공개 공유를 막으므로 넣지 않는다 (1.1, 11.2)
   styles?: string[];
   // ({ initialPath, children }) => ReactNode 컴포넌트를 default export하는 파일 (4.1)
   wrapper?: string;

@@ -38,7 +38,7 @@ export function RequestLog() {
   );
 }
 
-// 같은 문서 안의 요청은 경로만, 다른 주소는 전체를 보여준다
+// 같은 문서 안의 요청은 경로만, 다른 URL은 전체를 보여준다
 function toPath(url: string) {
   try {
     const u = new URL(url);

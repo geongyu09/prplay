@@ -17,7 +17,7 @@ const extensions = [
   lintGutter(),
   EditorView.lineWrapping,
   EditorView.theme({
-    "&": { fontSize: "12px", border: "1px solid var(--rv-line)", borderRadius: "6px", background: "#fff" },
+    "&": { fontSize: "15px", border: "1px solid var(--rv-line)", borderRadius: "6px", background: "#fff" },
     "&.cm-focused": { outline: "2px solid var(--rv-accent)", outlineOffset: "-1px" },
     ".cm-scroller": { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", maxHeight: "240px" },
   }),

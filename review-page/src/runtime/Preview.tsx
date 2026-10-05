@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <pre style={{ margin: 0, color: "#cf222e", whiteSpace: "pre-wrap", fontSize: 12 }}>
+        <pre style={{ margin: 0, color: "#cf222e", whiteSpace: "pre-wrap", fontSize: 15 }}>
           미리보기 렌더링 오류{"\n"}
           {this.state.error.stack ?? String(this.state.error)}
         </pre>

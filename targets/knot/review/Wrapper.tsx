@@ -24,7 +24,7 @@ export default function Wrapper({ initialPath, address, children }: WrapperProps
   );
 }
 
-// 주소 표시줄에 현재 주소를 알리고 이동 함수를 연결한다 (plan.md 4.1)
+// URL 표시줄에 현재 URL을 알리고 이동 함수를 연결한다 (plan.md 4.1)
 function AddressSync({ address }: { address: ReviewAddress }) {
   const location = useLocation();
   const navigate = useNavigate();

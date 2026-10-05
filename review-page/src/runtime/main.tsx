@@ -8,7 +8,7 @@ import shellCss from "./shell.css?inline";
 import { requestLog } from "./mock/requestStore";
 import { startMocking } from "./mock/startMocking";
 import { Overview } from "./Overview";
-import { activateCase, mock, Playground } from "./Playground";
+import { activateCase, type CaseStart, mock, Playground } from "./Playground";
 
 const OVERVIEW = "\0overview";
 
@@ -20,13 +20,16 @@ const tabs = [
 
 function App({ previewEl }: { previewEl: HTMLElement }) {
   const [tab, setTab] = useState(tabs[0].id);
+  // 개요 화면 사진을 눌러 열었으면 그 상태로 시작한다 (plan.md 3.4)
+  const [start, setStart] = useState<CaseStart>();
   const entry = cases.find((c) => c.name === tab);
 
-  const open = (id: string) => {
+  const open = (id: string, nextStart?: CaseStart) => {
     if (id === tab) return;
     // 개요 탭에서는 미리보기를 그리지 않는다. 대상 탭은 마운트 전에 그 케이스의 라우트로 바꾼다
     const next = cases.find((c) => c.name === id);
-    if (next) activateCase(next);
+    setStart(nextStart);
+    if (next) activateCase(next, nextStart);
     else {
       mock.routes = [];
       requestLog.clear();
@@ -66,7 +69,7 @@ function App({ previewEl }: { previewEl: HTMLElement }) {
 
       {entry ? (
         // 탭을 바꾸면 새로 마운트한다. props와 편집한 시나리오는 케이스마다 저장돼 있다 (plan.md 3.4, 7)
-        <Playground key={entry.name} entry={entry} previewEl={previewEl} />
+        <Playground key={entry.name} entry={entry} previewEl={previewEl} start={start} />
       ) : (
         pr && <Overview pr={pr} cases={cases} onOpen={open} />
       )}
