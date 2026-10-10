@@ -1,0 +1,19 @@
+{
+  "name": "prplay",
+  "version": "0.1.0",
+  "description": "PR 하나를 리뷰 페이지 HTML 하나로 만든다. PR 설명(개요)과, 바뀐 컴포넌트·페이지를 리뷰어가 직접 만져 볼 수 있는 플레이그라운드가 들어간다.",
+  "author": {
+    "name": "박건규",
+    "url": "https://github.com/geongyu09"
+  },
+  "homepage": "https://github.com/geongyu09/prplay",
+  "repository": "https://github.com/geongyu09/prplay",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "pull-request",
+    "react",
+    "playground",
+    "artifact"
+  ]
+}

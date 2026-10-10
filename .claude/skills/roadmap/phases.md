@@ -167,7 +167,7 @@
 | 8.5 | SKILL.md: 호출 이름, 설치 위치 안내, 8.1 결과에 따른 명령 형식, `allowed-tools` | §9.2, §11.3 |
 | 8.6 | Knot 적용: 로컬 마켓플레이스로 설치한 플러그인으로 Knot 복사본의 4케이스·#366 빌드·스모크·`tsc`, dev 서버, 빈 Vite + React 프로젝트의 처음 설정을 확인한다. 버전을 올려 업데이트했을 때 lockfile이 같으면 다시 설치하지 않는지도 본다. 로컬 폴더 마켓플레이스는 원본에서 실행되므로 캐시·업데이트 확인은 `file://` git 소스로 설치해서 한다 | §11.4 |
 | 8.7 | README(루트와 플러그인): 설치 명령, 요구 사항, 처음 설정, 사용법, 아티팩트 게시, 1장 제약 요약. 복사 안내는 지운다 | §11.5 |
-| 8.8 | 출시: GitHub 공개 저장소에 푸시해 `/plugin marketplace add <owner>/prplay`로 설치되는지 확인하고, 디렉터리 요구 사항을 확인해 claude.ai/directory/manage에 제출한다(제출은 사용자가 한다) | §11.5 |
+| 8.8 | 출시: GitHub 공개 저장소에 푸시해 `/plugin marketplace add geongyu09/prplay`로 설치되는지 확인하고, 디렉터리 요구 사항을 확인해 claude.ai/directory/manage에 제출한다(제출은 사용자가 한다) | §11.5 |
 
 **완료 기준**
 - `claude plugin validate`가 저장소 루트와 `plugins/prplay/`에서 통과한다.

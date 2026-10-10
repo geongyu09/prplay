@@ -1,6 +1,6 @@
 {
-  // 스킬 폴더 코드와 Knot 컴포넌트를 import하는 케이스까지 검사한다. 스킬 폴더 의존성은 review-page/node_modules(cli.ts가 설치)에서 찾는다. Knot 경로는 targets/knot/target.ts의 기본값과 같다
-  "include": ["review-page/src/**/*.ts", "review-page/src/**/*.tsx", "targets/**/*.ts", "targets/**/*.tsx", "../woowacourse/project/2026-Knot-pr366/frontend/src/global.d.ts", "../woowacourse/project/2026-Knot-pr366/frontend/src/shared/provider/themeProvider/emotion.d.ts"],
+  // 스킬 폴더 코드와 Knot 컴포넌트를 import하는 케이스까지 검사한다. 스킬 의존성은 plugins/prplay/skills/review-page/node_modules(cli.ts가 설치)에서 찾는다. Knot 경로는 targets/knot/target.ts의 기본값과 같다
+  "include": ["plugins/prplay/skills/review-page/src/**/*.ts", "plugins/prplay/skills/review-page/src/**/*.tsx", "targets/**/*.ts", "targets/**/*.tsx", "../woowacourse/project/2026-Knot-pr366/frontend/src/global.d.ts", "../woowacourse/project/2026-Knot-pr366/frontend/src/shared/provider/themeProvider/emotion.d.ts"],
   "compilerOptions": {
     "target": "es2022",
     "module": "esnext",
@@ -11,9 +11,9 @@
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "jsxImportSource": "@emotion/react",
-    "types": ["node", "./review-page/node_modules/vite/client"],
+    "types": ["node", "./plugins/prplay/skills/review-page/node_modules/vite/client"],
     "paths": {
-      "review-kit": ["./review-page/src/index.ts"],
+      "review-kit": ["./plugins/prplay/skills/review-page/src/index.ts"],
       "@/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/*"],
       "@pages/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/pages/*"],
       "@widgets/*": ["../woowacourse/project/2026-Knot-pr366/frontend/src/modules/widgets/*"],

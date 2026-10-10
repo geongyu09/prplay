@@ -1,0 +1,17 @@
+{
+  "name": "prplay",
+  "owner": {
+    "name": "박건규",
+    "url": "https://github.com/geongyu09"
+  },
+  "metadata": {
+    "description": "PR 리뷰 페이지를 만드는 prplay 플러그인 마켓플레이스"
+  },
+  "plugins": [
+    {
+      "name": "prplay",
+      "source": "./plugins/prplay",
+      "description": "PR 하나를 리뷰 페이지 HTML 하나로 만든다. PR 설명(개요)과, 바뀐 컴포넌트·페이지를 리뷰어가 직접 만져 볼 수 있는 플레이그라운드가 들어간다."
+    }
+  ]
+}

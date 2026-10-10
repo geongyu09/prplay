@@ -68,7 +68,7 @@
 
 ## 8단계. 플러그인 출시
 - [x] 8.1 플러그인 환경 확인 스파이크
-- [ ] 8.2 저장소·플러그인 구성과 validate
+- [x] 8.2 저장소·플러그인 구성과 validate
 - [ ] 8.3 의존성을 CLAUDE_PLUGIN_DATA에 설치
 - [ ] 8.4 review-kit.d.ts와 init 안내
 - [ ] 8.5 SKILL.md 호출 이름·명령
@@ -157,3 +157,5 @@
 - 2026-10-04 스킬이 Pretendard를 갖도록 변경(사용자 결정, plan.md 2.3·11.1·11.2·11.4·13장): 대상 프로젝트에 `pretendard` devDependency를 요구하던 방식은 Knot에 패키지가 없어 빌드마다 폰트가 빠졌다. `review-page/fonts/`(pretendard.css, PretendardVariable.woff2 1.3.9 2.0MB, OFL 라이선스)를 두고 Vite alias `review-kit/fonts` → 스킬 `fonts/`(`review-kit`보다 앞), config.ts는 `review-kit/` 경로를 절대 경로로 바꾸지 않음. `targets/knot/review/fonts.css` 삭제, Knot·README·템플릿 설정은 `styles: ["review-kit/fonts/pretendard.css"]`, SKILL.md 처음 설정 3번·phases.md 6단계 완료 기준 갱신. pretendard npm(97MB)은 넣지 않음. scratchpad Knot 복사본(pretendard 없음)에서 build 366 3823KB, woff2 base64 인라인·`document.fonts` loaded·외부 요청 0, 스모크 통과
 - 2026-10-04 폰트를 넣지 않도록 변경(사용자 결정, plan.md 1.1·2.2·2.3·11.1·11.2·11.4·14장): Pretendard woff2를 인라인한 #452 아티팩트가 Share에서 "공개 공유를 위한 검토를 할 수 없는 파일 형식이 포함되어 있습니다"로 막혔다(페이지 안의 바이너리는 `data:font/woff2` 하나뿐). `review-page/fonts/`와 Vite alias `review-kit/fonts` 삭제, config.ts는 styles를 모두 절대 경로로, Knot 설정에서 `styles` 제거, 템플릿·README·SKILL.md 처음 설정 3번·phases.md 갱신. build가 결과에 `data:font/`가 있으면 경고. scratchpad Knot 복사본에서 build 452 4045KB → 1365KB, `data:font/` 0, 가짜 woff2를 styles에 넣으면 경고 확인. 미리보기는 시스템 글꼴로 보인다
 - 2026-10-05 개요 화면 사진(사용자 결정, plan.md 0장·3.4): `build`가 결과 HTML을 프로젝트 playwright로 열어 대상마다 기본·프리셋·시나리오 미리보기를 최대 4장(전체 12장) 찍고, 그려진 곳만 잘라 JPEG로 `#review-shots` 태그에 끼워 넣는다(`src/build/shots.ts`, `--no-shots`, playwright 없으면 사진 없이 빌드). 개요 요약 아래 "화면" 칸에 찍힌 크기로 보여 주고, 누르면 그 대상 탭을 그 프리셋·시나리오로 연다(Playground `start`). SKILL.md 증거·검증, README build 줄. Knot 복사본(#366 PR head)에서 366(6장)·button·workspace-home(시나리오 4장, 확인용 pr.ts) 빌드·스모크·tsc 통과, 1200px 화면과 사진 클릭 확인
+- 2026-10-05 8.2 `review-page/` → `plugins/prplay/skills/review-page/`(git mv, node_modules 함께), `plugins/prplay/.claude-plugin/plugin.json`(0.1.0, MIT, author만, repository는 8.8), 루트 `.claude-plugin/marketplace.json`(metadata.description), LICENSE(MIT, 루트·플러그인 둘 다, 사용자 결정). tsconfig 경로와 README 개발 절 갱신. `claude plugin validate`가 루트·플러그인 모두 `--strict`까지 통과(2.1.289). tsc 오류는 옮기기 전과 같은 41개(Knot node_modules 없음). plan.md 11.1에 라이선스·author·typecheck 경로 기록
+- 2026-10-05 GitHub 저장소 geongyu09/prplay(공개, 비어 있음) 생성(사용자). origin 연결 확인, plugin.json author.url·homepage·repository와 marketplace.json owner 채움, plan.md 11.1·11.5·phases.md 8.8 설치 명령을 geongyu09/prplay로. validate 루트·플러그인 --strict 통과. 푸시는 아직

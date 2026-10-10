@@ -192,11 +192,11 @@ Claude Code에서 PR 브랜치를 체크아웃하고 설정 파일 폴더에서:
 
 ```sh
 pnpm install                          # 루트: 타입 검사 도구만
-(cd review-page && npm ci)             # 스킬 폴더 의존성 (build·dev를 한 번 돌려도 설치된다)
-pnpm typecheck                        # review-page/src와 targets/knot PR 폴더
+(cd plugins/prplay/skills/review-page && npm ci)         # 스킬 폴더 의존성 (build·dev를 한 번 돌려도 설치된다)
+pnpm typecheck                        # plugins/prplay/skills/review-page/src와 targets/knot PR 폴더
 ```
 
-- 스킬 원본은 `review-page/`다. 컴파일하지 않고 `.ts` 그대로 둔다. 리뷰 화면(`src/runtime/`)은 사용자 컴포넌트와 같은 Vite 번들에서 변환되고, Node 쪽(`cli.ts`, `init.ts`, `build/`)은 Node 타입 제거로 바로 실행된다.
-- 의존성을 바꾸면 `review-page/`에서 `npm install`로 `package-lock.json`을 갱신한다.
+- 스킬 원본은 `plugins/prplay/skills/review-page/`다. 컴파일하지 않고 `.ts` 그대로 둔다. 리뷰 화면(`src/runtime/`)은 사용자 컴포넌트와 같은 Vite 번들에서 변환되고, Node 쪽(`cli.ts`, `init.ts`, `build/`)은 Node 타입 제거로 바로 실행된다.
+- 의존성을 바꾸면 `plugins/prplay/skills/review-page/`에서 `npm install`로 `package-lock.json`을 갱신한다.
 - `targets/knot/`은 Knot에 둘 설정·wrapper·케이스 원본이다. 확인은 Knot 복사본에 스킬 폴더와 이 파일들을 복사해서 한다(plan.md 11.4).
 - 개발 순서와 진행 상황은 `/roadmap` 스킬과 `progress.md`를 본다.

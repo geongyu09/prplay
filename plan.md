@@ -703,7 +703,7 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
 플러그인 기본 지식 (공식 문서 https://code.claude.com/docs/en/plugins/ , 2026-09-29 확인)
 - 플러그인은 `.claude-plugin/plugin.json`(필수 `name`, 그 밖에 `version`, `description`, `author` 등)과 `skills/<이름>/SKILL.md`로 이뤄진다.
 - 마켓플레이스는 git 저장소 루트의 `.claude-plugin/marketplace.json`(`name`, `owner`, `plugins[]`)이다. 플러그인 `source`는 같은 저장소 안 상대 경로(`./plugins/prplay`)로 줄 수 있다.
-- 설치: `/plugin marketplace add <owner>/prplay` → `/plugin install prplay@prplay`. 팀 전체에 켜려면 대상 프로젝트 `.claude/settings.json`의 `extraKnownMarketplaces`와 `enabledPlugins`에 넣는다.
+- 설치: `/plugin marketplace add geongyu09/prplay` → `/plugin install prplay@prplay`. 팀 전체에 켜려면 대상 프로젝트 `.claude/settings.json`의 `extraKnownMarketplaces`와 `enabledPlugins`에 넣는다.
 - 설치하면 플러그인 폴더가 `~/.claude/plugins/` 캐시로 **복사**된다. 업데이트하면 이 복사본이 새것으로 교체되므로 플러그인 폴더(`${CLAUDE_PLUGIN_ROOT}`)에 쓴 파일은 남지 않는다. 업데이트 뒤에도 남는 폴더는 `${CLAUDE_PLUGIN_DATA}`(`~/.claude/plugins/data/<id>/`)다.
 - `plugin.json`에 `version`을 적으면 그 값을 올려야 사용자가 업데이트를 받는다. 서드파티 마켓플레이스는 자동 업데이트가 기본으로 꺼져 있다.
 - 검증: `claude plugin validate <폴더> [--strict]`.
@@ -719,14 +719,18 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(npx tsc *) Bash(npx review-ki
 
 prplay 저장소가 마켓플레이스이고, 플러그인은 `plugins/prplay/`에 둔다. 저장소 루트를 플러그인으로 쓰지 않는 것은, 설치할 때 `plan.md`·`targets/` 같은 개발 파일까지 캐시로 복사되지 않게 하려는 것이다.
 
+- 라이선스는 MIT다(2026-10-05 사용자 결정). 저장소 루트와 `plugins/prplay/`에 같은 `LICENSE`를 둔다(플러그인 폴더만 캐시로 복사되므로).
+- 저장소는 https://github.com/geongyu09/prplay (공개, 2026-10-05 생성)다. `plugin.json`의 `author`는 `{ "name": "박건규", "url": "https://github.com/geongyu09" }`, `homepage`·`repository`는 저장소 주소, `marketplace.json`의 `owner`도 같은 이름과 주소를 쓴다. 설치 명령은 `/plugin marketplace add geongyu09/prplay` → `/plugin install prplay@prplay`다.
+- 개발용 타입 검사(루트 `tsconfig.json`, `pnpm typecheck`)는 `plugins/prplay/skills/review-page/src`와 `targets/`를 본다. 스킬 의존성은 그 스킬 폴더 `node_modules`(8.3 이후에는 데이터 폴더로 가는 링크)에서 찾는다.
+
 ```
 .claude-plugin/
   marketplace.json         # name "prplay", owner, plugins: [{ name "prplay", source "./plugins/prplay" }]
 plugins/prplay/
   .claude-plugin/
-    plugin.json            # name "prplay", version, description, author, repository, license
+    plugin.json            # name "prplay", version, description, author, repository, license "MIT"
   README.md                # 플러그인 설명(설치, 처음 설정, 사용법)
-  LICENSE
+  LICENSE                  # MIT (저장소 루트에도 같은 파일)
   skills/review-page/      # 스킬 원본 (이전 prplay `review-page/`)
     SKILL.md               # /prplay:review-page
     example-component.tsx  # 컴포넌트 케이스 예시
@@ -830,7 +834,7 @@ Knot 저장소에는 파일을 쓰지 않으므로(13장 '작업 위치') 확인
 
 ### 11.5 출시
 
-1. **자체 마켓플레이스**: prplay 저장소를 GitHub에 공개하고 `claude plugin validate`가 통과하는 상태로 푸시한다. 사용자는 `/plugin marketplace add <owner>/prplay` → `/plugin install prplay@prplay`로 설치한다. 심사가 없다.
+1. **자체 마켓플레이스**: prplay 저장소를 GitHub에 공개하고 `claude plugin validate`가 통과하는 상태로 푸시한다. 사용자는 `/plugin marketplace add geongyu09/prplay` → `/plugin install prplay@prplay`로 설치한다. 심사가 없다.
 2. **Anthropic 디렉터리 제출**: https://claude.ai/directory/manage 에서 제출한다(유료 claude.ai 플랜 필요). 승인되면 claude.ai, Cowork, Claude Code에 함께 노출된다. 제출 절차와 요구 사항(라이선스, 설명, 아이콘, 보안 검토 등)은 제출 직전에 https://claude.com/docs/directory/publish 에서 다시 확인한다(14장 확인 항목).
 - `claude-plugins-official` 마켓플레이스는 Anthropic이 직접 관리하며 외부 제출을 받지 않는다.
 - README에는 설치 명령, 요구 사항(Node 22.18 이상, 대상 프로젝트의 `react`·`react-dom`·`msw`), 처음 설정, 아티팩트 게시 방법, 1장 제약 요약을 둔다.
